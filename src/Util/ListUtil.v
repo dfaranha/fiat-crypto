@@ -985,11 +985,10 @@ Lemma length_tl {A} ls : length (@tl A ls) = (length ls - 1)%nat.
 Proof. destruct ls; cbn [tl length]; omega. Qed.
 Hint Rewrite @length_tl : distr_length.
 
-Lemma length_snoc : forall {T} xs (x:T),
-  length xs = pred (length (xs++x::nil)).
-Proof.
-  boring; simpl_list; boring.
-Qed.
+Lemma length_snoc {A : Type} (l : list A) a : length (l ++ [a]) = S (length l).
+Proof. simpl_list; boring. Qed.
+
+Hint Rewrite @length_snoc : distr_length.
 
 Lemma combine_cons : forall {A B} a b (xs:list A) (ys:list B),
   combine (a :: xs) (b :: ys) = (a,b) :: combine xs ys.
@@ -1250,6 +1249,17 @@ Proof.
   { f_equal; omega. }
   { rewrite IHa; do 3 f_equal; omega. }
 Qed.
+
+Lemma map_seq_ext {A} (f g : nat -> A) (n m k : nat)
+      (H : forall i : nat, n <= i <= m + k -> f i = g (i + (m - n))%nat)
+      (Hnm : n <= m) :
+  map f (seq n k) = map g (seq m k).
+Proof.
+  generalize dependent m; generalize dependent n; induction k as [|k IHk]; intros; simpl.
+  - reflexivity.
+  - simpl; rewrite H by lia; replace (n + (m - n))%nat with m by omega.
+    rewrite (IHk (S n) (S m)); [reflexivity| |lia]. 
+    intros; rewrite Nat.sub_succ; apply H; lia. Qed.
 
 Lemma fold_right_and_True_forall_In_iff : forall {T} (l : list T) (P : T -> Prop),
   (forall x, In x l -> P x) <-> fold_right and True (map P l).
