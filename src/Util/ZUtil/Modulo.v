@@ -427,7 +427,4 @@ Module Z.
     autorewrite with zsimplify.
     Z.div_mod_to_quot_rem; nia.
   Qed.
-  
-  Lemma opp_mod2 a : a mod 2 = - a mod 2.
-  Proof. rewrite !Zmod_odd, Z.odd_opp; reflexivity. Qed.
 End Z.
