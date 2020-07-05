@@ -427,4 +427,9 @@ Module Z.
     autorewrite with zsimplify.
     Z.div_mod_to_quot_rem; nia.
   Qed.
+
+  Lemma mod_nonneg a m (Hm : 0 <= m) : 0 <= a mod m.
+  Proof. destruct (Z_zerop m); subst.
+         - rewrite Zmod_0_r; lia.
+         - assert (H : 0 < m) by lia; pose proof Z.mod_pos_bound a m H; lia. Qed.
 End Z.

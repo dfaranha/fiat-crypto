@@ -111,6 +111,7 @@ Section __.
   Definition c := s - m.
   Definition n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
   Definition sat_limbs := (n + 1)%nat.   (* to represent m in twos complement we might need another bit *)
+  Definition sat64_limbs := (n + 2)%nat. (* to repesent multiplication of limbsized integer with word *)
   Definition r := 2^machine_wordsize.
   Definition r'
     := match Z.modinv r m with
@@ -137,6 +138,7 @@ Section __.
   Local Notation saturated_bounds_list := (saturated_bounds_list n machine_wordsize).
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
   Local Notation larger_saturated_bounds := (Primitives.saturated_bounds sat_limbs machine_wordsize).
+  Local Notation even_larger_saturated_bounds := (Primitives.saturated_bounds sat64_limbs machine_wordsize).
 
   Definition divstep_input :=
     (Some r[0~>2^machine_wordsize-1],
@@ -152,6 +154,24 @@ Section __.
      Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) n),
      Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) n))%zrange.
 
+  Definition twos_complement_word_full_divstep_input :=
+    (Some r[0~>2^machine_wordsize - 1],
+     (Some r[0~>2^machine_wordsize - 1],
+      (Some r[0~>2^machine_wordsize - 1],
+       (Some r[0~>2^machine_wordsize - 1],
+        (Some r[0~>2^machine_wordsize - 1],
+         (Some r[0~>2^machine_wordsize - 1],
+          (Some r[0~>2^machine_wordsize - 1], tt)))))))%zrange.
+
+  Definition twos_complement_word_full_divstep_output :=
+    (Some r[0~>2^machine_wordsize - 1],
+     Some r[0~>2^machine_wordsize - 1],
+     Some r[0~>2^machine_wordsize - 1],
+     Some r[0~>2^machine_wordsize - 1],
+     Some r[0~>2^machine_wordsize - 1],
+     Some r[0~>2^machine_wordsize - 1],
+     Some r[0~>2^machine_wordsize - 1])%zrange.  
+
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
   Definition possible_values_of_machine_wordsize
@@ -166,6 +186,8 @@ Section __.
     := Option.invert_Some saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
   Definition larger_bounds : list (ZRange.type.option.interp base.type.Z)
     := Option.invert_Some larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+  Definition even_larger_bounds : list (ZRange.type.option.interp base.type.Z)
+    := Option.invert_Some even_larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
 
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
@@ -279,7 +301,7 @@ Section __.
                             (CorrectnessStringification.dyn_context.cons
                                (Z.log2 m) "(log2 m)"
                                (CorrectnessStringification.dyn_context.cons
-                                  (@eval_twosc machine_wordsize n) "twos_complement_eval"
+                                  (@eval_twos_complement machine_wordsize n) "twos_complement_eval"
                                   CorrectnessStringification.dyn_context.nil)))))))%string)
          (only parsing).
   Local Notation "'docstring_with_summary_from_lemma!' prefix summary correctness"
@@ -641,6 +663,132 @@ Section __.
              (fun fname : string => ["The function " ++ fname ++ " computes a divstep."]%string)
              (divstep_correct machine_wordsize n m valid from_montgomery_res)).
 
+  Definition twos_complement_word_full_divstep
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_twos_complement_word_full_divstep_gen
+            @ GallinaReify.Reify machine_wordsize)
+         (twos_complement_word_full_divstep_input)
+         (twos_complement_word_full_divstep_output).
+
+  Definition stwos_complement_word_full_divstep (prefix : string)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToString
+          machine_wordsize prefix "twos_complement_word_full_divstep" twos_complement_word_full_divstep
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " computes a divstep on wordsized integers."]%string)
+             (forall v, valid v)).
+             (* (twos_complement_word_full_divstep_correct machine_wordsize n m valid from_montgomery_res)). *)
+
+  Definition shiftr62
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_shiftr62_gen
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify sat_limbs)
+         (Some larger_bounds, tt)
+         (Some larger_bounds).
+
+  Definition sshiftr62 (prefix : string)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToString
+          machine_wordsize prefix "shiftr62" shiftr62
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " computes a divstep on wordsized integers."]%string)
+             (forall v, valid v)).
+             (* (shiftr62_correct machine_wordsize n m valid from_montgomery_res)). *)
+
+  Definition sat64_mul
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_sat64_mul_gen
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify sat_limbs)
+         ((Some r[0~>2^machine_wordsize-1]%zrange, (Some larger_bounds, tt)))
+         (Some even_larger_bounds).
+
+  Definition ssat64_mul (prefix : string)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToString
+          machine_wordsize prefix "sat64_mul" sat64_mul
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " computes a divstep on wordsized integers."]%string)
+             (forall v, valid v)).
+             (* (sat64_mul_correct machine_wordsize n m valid from_montgomery_res)). *)
+
+  Definition sat_add
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_sat_add_gen
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify sat64_limbs)
+         ((Some even_larger_bounds, (Some even_larger_bounds, tt)))
+         (Some even_larger_bounds).
+
+  Definition ssat_add (prefix : string)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToString
+          machine_wordsize prefix "sat_add" sat_add
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " computes a divstep on wordsized integers."]%string)
+             (forall v, valid v)).
+             (* (sat64_mul_correct machine_wordsize n m valid from_montgomery_res)). *)
+
+  Definition twos_complement_word_to_montgomery_no_encode
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_twos_complement_word_to_montgomery_no_encode_gen
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m)
+         (Some r[0~>2^machine_wordsize-1]%zrange, tt)
+         (Some bounds).
+
+  Definition stwos_complement_word_to_montgomery_no_encode (prefix : string)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToString
+          machine_wordsize prefix "twos_complement_word_to_montgomery_no_encode" twos_complement_word_to_montgomery_no_encode
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " computes a divstep on wordsized integers."]%string)
+             (forall v, valid v)).
+             (* (sat64_mul_correct machine_wordsize n m valid from_montgomery_res)). *)
+
+  Definition jumpprecomp
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_jumpprecomp_gen
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         tt
+         (Some bounds).
+
+  Definition sjumpprecomp (prefix : string)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToString
+          machine_wordsize prefix "jumpprecomp" jumpprecomp
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname => ["The function " ++ fname ++ " returns the jumpprecomputed value for Bernstein-Yang-inversion (in montgomery form)."]%string)
+             (precomp_correct machine_wordsize n m valid from_montgomery_res)).
+             (* (jumpprecomp_correct machine_wordsize n m valid from_montgomery_res)). *)
+  
   Lemma bounded_by_of_valid x
         (H : valid x)
     : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) (Some bounds) x = true.
@@ -1001,7 +1149,13 @@ Section __.
             ("one", sone);
             ("msat", smsat);
             ("precomp", sprecomp);
-            ("divstep", sdivstep)].
+            ("divstep", sdivstep);
+            ("twos_complement_word_full_divstep", stwos_complement_word_full_divstep);
+            ("shiftr62", sshiftr62);
+            ("twos_complement_word_to_montgomery_no_encode", stwos_complement_word_to_montgomery_no_encode);
+            ("sat_add", ssat_add);
+            ("sat64_mul", ssat64_mul);
+            ("jumpprecomp", sjumpprecomp)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 

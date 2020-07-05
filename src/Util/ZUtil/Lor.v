@@ -7,6 +7,16 @@ Require Import Crypto.Util.ZUtil.Testbit.
 Local Open Scope bool_scope. Local Open Scope Z_scope.
 
 Module Z.
+  Lemma lor_abs_l a b : (a &' b) |' a = a.
+  Proof.
+    apply Z.bits_inj; intro; rewrite Z.lor_spec, Z.land_spec.
+    rewrite orb_comm, absorption_orb; reflexivity. Qed.
+
+  Lemma lor_abs_r a b :  a |' (a &' b)= a.
+  Proof.
+    apply Z.bits_inj; intro; rewrite Z.lor_spec, Z.land_spec.
+    rewrite absorption_orb; reflexivity. Qed.
+  
   Lemma lor_add a b (Hand : a &' b = 0) : a |' b = a + b.
   Proof. rewrite <- Z.lxor_lor, Z.add_nocarry_lxor by assumption; reflexivity. Qed.
 

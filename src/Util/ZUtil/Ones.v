@@ -88,6 +88,10 @@ Module Z.
   Qed.
   Hint Resolve ones_nonneg : zarith.
 
+  Lemma ones_bound m (Hm : 0 <= m) :
+    0 <= Z.ones m < 2 ^ m.
+  Proof. split. apply ones_nonneg; lia. rewrite Z.ones_equiv; lia. Qed.
+
   Lemma ones_pos_pos : forall i, (0 < i) -> 0 < Z.ones i.
   Proof.
     intros.
@@ -195,7 +199,7 @@ Module Z.
   Proof. rewrite Z.lor_comm; apply lor_pow2_mod_pow2_r; assumption. Qed.
   Hint Rewrite lor_pow2_mod_pow2_l using zutil_arith : zsimplify.
   Hint Rewrite lor_pow2_mod_pow2_l using assumption : zsimplify_fast.
-  
+
   Lemma lor_pow2_div_pow2_r x e (He : 0 <= e) : (Z.lor x (2^e-1)) / (2^e) = x / 2^e.
   Proof.
     destruct (Z_zerop e).

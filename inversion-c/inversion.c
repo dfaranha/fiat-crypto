@@ -5,10 +5,10 @@
 #include "montgomery_inversion.c"
 
 /* CHANGE THESE ACCORDING TO PRIME AND WORDSIZE */
-#define LIMBS 8 /* amount of limbs pr. large integer in montgomery domain, see montgomery_inversion */
-#define WORD uint32_t
-#define WORDSIZE 32 /* wordsize */
-#define LEN_PRIME 256 /* length of the prime in bits */
+#define LIMBS 6 /* amount of limbs pr. large integer in montgomery domain, see montgomery_inversion */
+#define WORD uint64_t
+#define WORDSIZE 64 /* wordsize */
+#define LEN_PRIME 381 /* length of the prime in bits */
 /* DON'T CHANGE ANYTHING BELOW HERE */
 
 #if LEN_PRIME < 46

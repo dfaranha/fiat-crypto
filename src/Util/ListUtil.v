@@ -324,15 +324,15 @@ End map2.
 
 (* xs[n] := f xs[n] *)
 Fixpoint update_nth {T} n f (xs:list T) {struct n} :=
-	match n with
-	| O => match xs with
-				 | nil => nil
-				 | x'::xs' => f x'::xs'
-				 end
-	| S n' =>  match xs with
-				 | nil => nil
-				 | x'::xs' => x'::update_nth n' f xs'
-				 end
+        match n with
+        | O => match xs with
+                                 | nil => nil
+                                 | x'::xs' => f x'::xs'
+                                 end
+        | S n' =>  match xs with
+                                 | nil => nil
+                                 | x'::xs' => x'::update_nth n' f xs'
+                                 end
   end.
 
 (* xs[n] := x *)
@@ -479,13 +479,13 @@ Lemma unfold_set_nth {T} n x
     @set_nth T n x xs
     = match n with
       | O => match xs with
-	     | nil => nil
-	     | x'::xs' => x::xs'
-	     end
+             | nil => nil
+             | x'::xs' => x::xs'
+             end
       | S n' =>  match xs with
-		 | nil => nil
-		 | x'::xs' => x'::set_nth n' x xs'
-		 end
+                 | nil => nil
+                 | x'::xs' => x'::set_nth n' x xs'
+                 end
       end.
 Proof.
   induction n; destruct xs; reflexivity.
@@ -1251,15 +1251,30 @@ Proof.
 Qed.
 
 Lemma map_seq_ext {A} (f g : nat -> A) (n m k : nat)
-      (H : forall i : nat, n <= i <= m + k -> f i = g (i + (m - n))%nat)
+      (H : forall i : nat, n <= i < m + k -> f i = g (i + (m - n))%nat)
       (Hnm : n <= m) :
   map f (seq n k) = map g (seq m k).
 Proof.
-  generalize dependent m; generalize dependent n; induction k as [|k IHk]; intros; simpl.
+  generalize dependent m; generalize dependent n;
+    induction k as [|k IHk]; intros; simpl.
   - reflexivity.
   - simpl; rewrite H by lia; replace (n + (m - n))%nat with m by omega.
-    rewrite (IHk (S n) (S m)); [reflexivity| |lia]. 
+    rewrite (IHk (S n) (S m)); [reflexivity| |lia].
     intros; rewrite Nat.sub_succ; apply H; lia. Qed.
+
+Lemma map_seq_pred n m :
+  seq n m = map (fun i => (i - 1)%nat) (seq (S n) m).
+Proof. rewrite <- map_id at 1; apply map_seq_ext; intros; lia. Qed.
+
+Lemma map_seq_succ n m :
+  seq (S n) m = map (fun i => (i + 1)%nat) (seq n m).
+Proof. rewrite <- map_id at 1; symmetry; apply map_seq_ext; intros; lia. Qed.
+
+Lemma fold_right_ext {A B : Type} f g (l : list B) b :
+  (forall i (a : A), f i a = g i a) ->
+  fold_right f b l = fold_right g b l.
+Proof. intros ext; induction l as [|? ? IHl]; [reflexivity|].
+       simpl; rewrite IHl; rewrite ext; reflexivity. Qed.
 
 Lemma fold_right_and_True_forall_In_iff : forall {T} (l : list T) (P : T -> Prop),
   (forall x, In x l -> P x) <-> fold_right and True (map P l).
