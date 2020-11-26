@@ -1,5 +1,6 @@
 (*** Boolean Utility Lemmas and Databases *)
 Require Import Coq.Bool.Bool.
+Require Import Crypto.Util.Notations.
 
 (** For equalities of booleans *)
 Create HintDb bool_congr discriminated.
@@ -114,3 +115,84 @@ Lemma eqb_true_r x : Bool.eqb true x = x. Proof. now destruct x. Qed.
 Lemma eqb_false_l x : Bool.eqb x false = negb x. Proof. now destruct x. Qed.
 Lemma eqb_false_r x : Bool.eqb false x = negb x. Proof. now destruct x. Qed.
 Hint Rewrite eqb_true_l eqb_true_r eqb_false_l eqb_false_r : boolsimplify.
+
+Module Thunked.
+  Local Notation lift0 f := (fun (v : unit) => f) (only parsing).
+  Local Notation lift1 f := (fun (x : unit -> bool) (v : unit) => f (x v)) (only parsing).
+  Local Notation lift2 f := (fun (x y : unit -> bool) (v : unit) => f (x v) (y v)) (only parsing).
+  Local Notation lift3 f := (fun (x y z : unit -> bool) (v : unit) => f (x v) (y v) (z v)) (only parsing).
+  Definition bool := unit -> bool.
+  Definition true : bool := lift0 true.
+  Definition false : bool := lift0 false.
+  Definition orb (x y : bool) : bool
+    := fun _ => if x tt then Datatypes.true else y tt.
+  Definition xorb : bool -> bool -> bool := lift2 xorb.
+  Definition andb (x y : bool) : bool
+    := fun _ => if x tt then y tt else Datatypes.false.
+  Definition implb (x y : bool) : bool
+    := fun _ => if x tt then y tt else Datatypes.true.
+  Definition eqb : bool -> bool -> bool := lift2 eqb.
+  Definition ifb (c t f : bool) : bool
+    := fun _ => if c tt then t tt else f tt.
+  Definition eq : bool -> bool -> Prop := fun a b => a tt = b tt.
+
+  Module Export Notations.
+    Delimit Scope thunked_bool_scope with thunked_bool.
+    Bind Scope thunked_bool_scope with bool.
+    Infix "&&" := andb : thunked_bool_scope.
+    Infix "||" := orb : thunked_bool_scope.
+  End Notations.
+
+  Local Infix "==" := eq.
+
+  Create HintDb thunked_bool_helper discriminated.
+
+  Local Ltac t :=
+    cbv [true false bool orb xorb andb implb eqb ifb eq
+              Datatypes.orb Datatypes.xorb Datatypes.andb Datatypes.implb Bool.eqb Bool.ifb] in *;
+    repeat first [ progress intros
+                 | progress subst
+                 | reflexivity
+                 | congruence
+                 | match goal with
+                   | [ x : unit |- _ ] => destruct x
+                   | [ x : unit -> Datatypes.bool |- _ ] => generalize dependent (x tt); clear x; intros
+                   | [ H : context[match ?x with _ => _ end] |- _ ] => is_var x; destruct x
+                   | [ |- context[match ?x with _ => _ end] ] => is_var x; destruct x
+                   | [ H : and _ _ |- _ ] => destruct H
+                   | [ |- and _ _ ] => split
+                   end ].
+
+  Lemma unthunk_true : true tt = Datatypes.true.
+  Proof. t. Qed.
+  Hint Rewrite unthunk_true : unthunk_bool.
+  Lemma unthunk_false : false tt = Datatypes.false.
+  Proof. t. Qed.
+  Hint Rewrite unthunk_false : unthunk_bool.
+  Lemma unthunk_orb {x y} : orb x y tt = Datatypes.orb (x tt) (y tt).
+  Proof. t. Qed.
+  Hint Rewrite @unthunk_orb : unthunk_bool.
+  Lemma unthunk_xorb {x y} : xorb x y tt = Datatypes.xorb (x tt) (y tt).
+  Proof. t. Qed.
+  Hint Rewrite @unthunk_xorb : unthunk_bool.
+  Lemma unthunk_andb {x y} : andb x y tt = Datatypes.andb (x tt) (y tt).
+  Proof. t. Qed.
+  Hint Rewrite @unthunk_andb : unthunk_bool.
+  Lemma unthunk_implb {x y} : implb x y tt = Datatypes.implb (x tt) (y tt).
+  Proof. t. Qed.
+  Hint Rewrite @unthunk_implb : unthunk_bool.
+  Lemma unthunk_eqb {x y} : eqb x y tt = Bool.eqb (x tt) (y tt).
+  Proof. t. Qed.
+  Hint Rewrite @unthunk_eqb : unthunk_bool.
+  Lemma unthunk_ifb {x y z} : ifb x y z tt = Bool.ifb (x tt) (y tt) (z tt).
+  Proof. t. Qed.
+  Hint Rewrite @unthunk_ifb : unthunk_bool.
+  Lemma unthunk_eq {x y} : eq x y = (x tt = y tt).
+  Proof. t. Qed.
+  Hint Rewrite @unthunk_eq : unthunk_bool.
+
+  Lemma andb_prop : forall a b : bool, a && b == true -> a == true /\ b == true.
+  Proof. t. Qed.
+  Lemma andb_true_intro : forall b1 b2 : bool, b1 == true /\ b2 == true -> b1 && b2 == true.
+  Proof. t. Qed.
+End Thunked.

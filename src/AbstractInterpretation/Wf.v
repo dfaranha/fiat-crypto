@@ -154,7 +154,7 @@ Module Compilers.
           destruct t; [ destruct v1, v2, Hv | ]; cbn in *; cbv [respectful]; eauto; intros; apply bottom_Proper.
         Qed.
 
-        Local Hint Resolve (ex_intro _ nil) (ex_intro _ (cons _ nil)) : core.
+        Local Hint Resolve (fun A (P : list A -> Prop) => ex_intro P nil) (fun A (x : A) (P : list A -> Prop) => ex_intro P (cons x nil)) : core.
         Local Hint Constructors expr.wf ex : core.
         Local Hint Unfold List.In : core.
 
@@ -549,6 +549,11 @@ Module Compilers.
                                      clear H1 H2
                                 | [ H : ?x = ?x |- _ ] => clear H
                                 | [ H : length ?l1 = length ?l2, H' : context[length ?l1] |- _ ] => rewrite H in H'
+                                | [ H : context[invert_pair ?e] |- _ ]
+                                  => let lem := lazymatch e with
+                                                | (?x, ?y)%expr => constr:(expr.invert_pair_ident_pair(v1:=x) (v2:=y) : invert_pair e = _)
+                                                end in
+                                     rewrite lem in H
                                 end
                               | apply wf_annotate_with_expr
                               | apply DefaultValue.expr.base.wf_default
@@ -1039,7 +1044,7 @@ Module Compilers.
                        | progress break_innermost_match_hyps
                        | progress expr.invert_subst
                        | progress expr.inversion_wf_one_constr
-                       | progress cbn [invert_AppIdent invert_App invert_Ident Option.bind] in *
+                       | progress cbn [invert_AppIdent invert_App invert_Ident invert_App_cps invert_AppIdent_cps Option.bind] in *
                        | progress expr.invert_match
                        | progress expr.inversion_expr
                        | now refine (wf_annotation_to_cast_helper eq_refl) ].

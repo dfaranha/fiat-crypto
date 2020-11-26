@@ -53,7 +53,7 @@ endif
 .DEFAULT_GOAL := all
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
-WARNINGS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,-deprecated-hint-constr,+omega-is-deprecated,+deprecated-instantiate-syntax
+WARNINGS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,-deprecated-hint-constr,-fragile-hint-constr,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive
 update-_CoqProject::
 	$(SHOW)'ECHO > _CoqProject'
 	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-arg -w -arg $(WARNINGS)'; (git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES) | $(SORT_COQPROJECT))) > _CoqProject
@@ -102,7 +102,10 @@ SOME_EARLY_VOFILES := \
 COPY_TO_FIAT_RUST := \
 	AUTHORS \
 	CONTRIBUTORS \
-	LICENSE
+	COPYRIGHT \
+	LICENSE-MIT \
+	LICENSE-APACHE \
+	LICENSE-BSD-1
 
 # computing the vo_reverse_closure is slow, so we only do it if we're
 # asked to make the lite target
@@ -240,6 +243,15 @@ OUTPUT_PREOUTS := \
 	Crypto.Fancy.Barrett256.barrett_red256 \
 	Crypto.UnsaturatedSolinasHeuristics.Tests.get_possible_limbs \
 	Crypto.UnsaturatedSolinasHeuristics.Tests.get_balances
+
+ifneq ($(SKIP_BEDROCK2), 1)
+OUTPUT_VOS += \
+	src/Bedrock/Group/ScalarMult/LadderStep.vo \
+	src/Bedrock/Group/ScalarMult/MontgomeryLadder.vo
+OUTPUT_PREOUTS += \
+	Crypto.Bedrock.Group.ScalarMult.LadderStep.ladderstep_body \
+	Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body
+endif
 
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))

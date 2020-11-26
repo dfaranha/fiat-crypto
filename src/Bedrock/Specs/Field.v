@@ -28,9 +28,6 @@ Class FieldParameters :=
     felem_small_literal : string;
   }.
 
-Lemma M_nonzero {fp : FieldParameters} : M <> 0.
-Proof. cbv [M]. congruence. Qed.
-
 Class FieldParameters_ok {field_parameters : FieldParameters} :=
   { M_prime : Znumtheory.prime M;
     (* TODO: a24_ok *)
@@ -77,54 +74,40 @@ Class FieldRepresentation_ok
                         -> bounded_by loose_bounds X;
   }.
 
-Section Proofs.
-  Context {semantics : Semantics.parameters}
-          {semantics_ok : Semantics.parameters_ok semantics}.
-  Context {field_parameters : FieldParameters}
-          {field_representaton : FieldRepresentation}
-          {field_representation_ok : FieldRepresentation_ok}.
-
-  Lemma FElem_to_bytes px x :
-    Lift1Prop.impl1 (FElem px x) (Placeholder px).
-  Proof.
-    rewrite FElem_from_bytes.
-    repeat intro; eexists; eauto.
-  Qed.
-End Proofs.
-
-Section Specs.
-  Context {semantics : Semantics.parameters}
-          {semantics_ok : Semantics.parameters_ok semantics}.
-  Context {field_parameters : FieldParameters}
-          {field_representaton : FieldRepresentation}.
-
-  Local Notation unop_spec name op xbounds outbounds :=
-    (forall! (x : felem) (px pout : word),
-        (fun Rr mem =>
-           bounded_by xbounds x
-           /\ (exists Ra, (FElem px x * Ra)%sep mem)
-           /\ (Placeholder pout * Rr)%sep mem)
-          ===> name @ [px; pout] ===>
-          (fun _ =>
+Notation unop_spec name op xbounds outbounds :=
+  (forall! (x : felem) (px pout : word),
+      (fun Rr mem =>
+         bounded_by xbounds x
+         /\ (exists Ra, (FElem px x * Ra)%sep mem)
+         /\ (Placeholder pout * Rr)%sep mem)
+        ===> name @ [pout; px] ===>
+        (fun _ =>
            liftexists out,
            (emp (feval out = op (feval x)
                  /\ bounded_by outbounds out)
             * FElem pout out)%sep))
-      (only parsing).
+    (only parsing).
 
-  Local Notation binop_spec name op xbounds ybounds outbounds :=
-    (forall! (x y : felem) (px py pout : word),
-        (fun Rr mem =>
-           bounded_by xbounds x
-           /\ bounded_by ybounds y
-           /\ (exists Ra, (FElem px x * FElem py y * Ra)%sep mem)
-           /\ (Placeholder pout * Rr)%sep mem)
-          ===> name @ [px; py; pout] ===>
-          (fun _ =>
+Notation binop_spec name op xbounds ybounds outbounds :=
+  (forall! (x y : felem) (px py pout : word),
+      (fun Rr mem =>
+         bounded_by xbounds x
+         /\ bounded_by ybounds y
+         /\ (exists Ra, (FElem px x * Ra)%sep mem)
+         /\ (exists Ra, (FElem py y * Ra)%sep mem)
+         /\ (Placeholder pout * Rr)%sep mem)
+        ===> name @ [pout; px; py] ===>
+        (fun _ =>
            liftexists out,
            (emp ((feval out = op (feval x) (feval y))
                  /\ bounded_by outbounds out)
             * FElem pout out)%sep)) (only parsing).
+
+Section FunctionSpecs.
+  Context {semantics : Semantics.parameters}
+          {semantics_ok : Semantics.parameters_ok semantics}.
+  Context {field_parameters : FieldParameters}
+          {field_representaton : FieldRepresentation}.
 
   Instance spec_of_mul : spec_of mul :=
     binop_spec mul F.mul loose_bounds loose_bounds tight_bounds.
@@ -145,7 +128,7 @@ Section Specs.
       (fun Rr mem =>
          (exists Ra, (FElemBytes px bs * Ra)%sep mem)
          /\ (Placeholder pout * Rr)%sep mem)
-        ===> from_bytes @ [px; pout] ===>
+        ===> from_bytes @ [pout; px] ===>
         (fun _ =>
            liftexists X,
            (emp (feval X = feval_bytes bs /\ bounded_by tight_bounds X)
@@ -157,7 +140,7 @@ Section Specs.
          bounded_by tight_bounds x
          /\ (exists Ra, (FElem px x * Ra)%sep mem)
          /\ (FElemBytes pout old_out * Rr)%sep mem)
-        ===> to_bytes @ [px; pout] ===>
+        ===> to_bytes @ [pout; px] ===>
         (fun _ =>
            liftexists bs,
            (emp (feval_bytes bs = feval x) * FElemBytes pout bs)%sep).
@@ -165,16 +148,34 @@ Section Specs.
   Definition spec_of_felem_copy : spec_of felem_copy :=
     forall! (x : felem) (px pout : word),
       (sep (FElem px x * Placeholder pout)%sep)
-        ===> felem_copy @ [px; pout] ===>
+        ===> felem_copy @ [pout; px] ===>
         (fun _ => FElem px x * FElem pout x)%sep.
 
   Definition spec_of_felem_small_literal : spec_of felem_small_literal :=
     forall! (x pout : word),
       (sep (Placeholder pout))
-        ===> felem_small_literal @ [x; pout] ===>
+        ===> felem_small_literal @ [pout; x] ===>
         (fun _ =>
            liftexists X,
            (emp (F.to_Z (feval X) = word.unsigned x
                  /\ bounded_by tight_bounds X)
             * FElem pout X)%sep).
-End Specs.
+End FunctionSpecs.
+
+Section SpecProperties.
+  Context {semantics : Semantics.parameters}
+          {semantics_ok : Semantics.parameters_ok semantics}.
+  Context {field_parameters : FieldParameters}
+          {field_representaton : FieldRepresentation}
+          {field_representation_ok : FieldRepresentation_ok}.
+
+  Lemma FElem_to_bytes px x :
+    Lift1Prop.impl1 (FElem px x) (Placeholder px).
+  Proof.
+    rewrite FElem_from_bytes.
+    repeat intro; eexists; eauto.
+  Qed.
+
+  Lemma M_nonzero : M <> 0.
+  Proof. cbv [M]. congruence. Qed.
+End SpecProperties.

@@ -1,5 +1,5 @@
 -R src Crypto
--arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,-deprecated-hint-constr,+omega-is-deprecated,+deprecated-instantiate-syntax
+-arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,-deprecated-hint-constr,-fragile-hint-constr,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive
 src/BoundsPipeline.v
 src/CLI.v
 src/COperationSpecifications.v
@@ -112,6 +112,7 @@ src/Bedrock/Group/ScalarMult/LadderStep.v
 src/Bedrock/Group/ScalarMult/MontgomeryEquivalence.v
 src/Bedrock/Group/ScalarMult/MontgomeryLadder.v
 src/Bedrock/Group/ScalarMult/ScalarMult.v
+src/Bedrock/ScalarField/Interface/Compilation.v
 src/Bedrock/Specs/Field.v
 src/Bedrock/Specs/Group.v
 src/Bedrock/Specs/ScalarField.v
@@ -378,6 +379,7 @@ src/Util/ZUtil/LandLorBounds.v
 src/Util/ZUtil/LandLorShiftBounds.v
 src/Util/ZUtil/Le.v
 src/Util/ZUtil/Lnot.v
+src/Util/ZUtil/LnotModulo.v
 src/Util/ZUtil/Log2.v
 src/Util/ZUtil/Lor.v
 src/Util/ZUtil/Ltz.v

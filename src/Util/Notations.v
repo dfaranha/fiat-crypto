@@ -32,7 +32,7 @@ Reserved Infix "=ₙ?" (at level 70, no associativity).
 Reserved Infix "=ℤ?" (at level 70, no associativity).
 Reserved Infix "=ᶻ?" (at level 70, no associativity).
 Reserved Infix "=ⁿ?" (at level 70, no associativity).
-Reserved Notation "f ?" (at level 9, format "f ?").
+Reserved Notation "f ?" (at level 11, format "f ?", left associativity).
 Reserved Notation "f [ ? ]" (at level 9, format "f [ ? ]").
 Reserved Notation "f +" (at level 50, format "f +").
 Reserved Notation "f *" (at level 40, format "f *").

@@ -4,6 +4,7 @@ Require Import Coq.Strings.String.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Translation.Expr.
 Require Import Crypto.Language.API.
+Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
@@ -47,7 +48,7 @@ Section Cmd.
         (1%nat, v, Syntax.cmd.set v rhs)
     end.
 
-  Fixpoint assign {t} (nextn : nat)
+  Definition assign {t} (nextn : nat)
     : rtype t -> (nat * ltype t * Syntax.cmd.cmd) :=
     match t as t0 return
           rtype t0 -> nat * ltype t0 * _ with
@@ -56,6 +57,14 @@ Section Cmd.
       fun _ =>
         (0%nat, dummy_ltype _, Syntax.cmd.skip)
     end.
+
+  Definition translate_ident2_for_cmd {a b c} (i : ident (a -> b -> c))
+    : ltype a -> ltype b -> option (ltype c)
+    := match i in ident t return ltype (type.domain t) -> ltype (type.domain (type.codomain t)) -> option (ltype (type.codomain (type.codomain t))) with
+       | ident.cons base_Z => fun x xs => Some (x :: xs)
+       | ident.pair _ _ => fun x y => Some (x, y)
+       | _ => fun _ _ => None
+       end.
 
   Fixpoint translate_cmd
            {t} (e : @API.expr ltype t) (nextn : nat)
@@ -70,19 +79,24 @@ Section Cmd.
       ((fst (fst trx) + fst (fst trf))%nat,
        snd (fst trf),
        Syntax.cmd.seq (snd trx) (snd trf))
-    | expr.App
-        type_listZ type_listZ
-        (expr.App type_Z _ (expr.Ident _ (ident.cons _)) x) l =>
-      let trx := assign nextn (translate_expr true x) in
-      let trl := translate_cmd l (S nextn) in
-      ((fst (fst trx) + fst (fst trl))%nat,
-       snd (fst trx) :: snd (fst trl),
-       Syntax.cmd.seq (snd trx) (snd trl))
+    | expr.App _ _ _ _ as e
+      => let result_if_ident2
+             := (ixy <- invert_expr.invert_AppIdent2_cps e (@translate_cmd) (@translate_cmd);
+                let '(existT _ (i, translate_cmd_x, translate_cmd_y)) := ixy in
+                let trx := translate_cmd_x nextn in
+                let try := translate_cmd_y (fst (fst trx) + nextn)%nat in
+                vars <- translate_ident2_for_cmd i (snd (fst trx)) (snd (fst try));
+                Some ((fst (fst trx) + fst (fst try))%nat,
+                      vars,
+                      Syntax.cmd.seq (snd trx) (snd try)))%option in
+         match result_if_ident2 with
+         | Some res => res
+         | None =>
+           let v := translate_expr true e in
+           assign nextn v
+         end
     | expr.Ident type_listZ (ident.nil _) =>
       (0%nat, [], Syntax.cmd.skip)
-    | expr.App _ _ f x =>
-      let v := translate_expr true (expr.App f x) in
-      assign nextn v
     | expr.Ident _ i =>
       let v := translate_expr true (expr.Ident i) in
       assign nextn v

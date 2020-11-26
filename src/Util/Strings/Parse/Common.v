@@ -115,6 +115,14 @@ Definition strip_whitespace_around {A} (p : ParserAction A) : ParserAction A
                           p ;;->{ fun v _ => v }
                           parse_any_whitespace.
 
+Definition strip_whitespace_before {A} (p : ParserAction A) : ParserAction A
+  := parse_any_whitespace ;;->{ fun _ v => v }
+                          p.
+
+Definition strip_whitespace_after {A} (p : ParserAction A) : ParserAction A
+  := p ;;->{ fun v _ => v }
+       parse_any_whitespace.
+
 Definition parse_list_gen {A} (leftbr sep rightbr : string) (parse : ParserAction A) : ParserAction (list A)
   := (strip_whitespace_around leftbr)
        ;;->{ fun _ v => v }

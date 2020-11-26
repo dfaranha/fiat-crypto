@@ -46,7 +46,7 @@ Section Expr.
       true
     | expr.Var _ _ =>
       true
-    | _ => false 
+    | _ => false
     end.
 
   Definition invert_literal (x : Syntax.expr) : option Z :=
@@ -87,6 +87,20 @@ Section Expr.
            then expr.op bopname.slu x n
            else make_error type_Z
       else base_make_error _.
+
+  Definition rlnot_modulo
+    : rtype (type_Z -> type_Z -> type_Z) :=
+    fun x m =>
+      match invert_literal m with
+      | Some m => if (2^(Z.log2 m) =? m)
+                  then expr.op bopname.xor
+                               (if Z.log2 m =? Semantics.width (* is this a good place to do this optimization? *)
+                                then x
+                                else expr.op bopname.and x (expr.literal (Z.ones (Z.log2 m))))
+                               (expr.literal (Z.ones (Z.log2 m)))
+                  else make_error type_Z
+      | None => make_error type_Z
+      end.
 
   Definition rselect
     : rtype (type_Z -> type_Z -> type_Z -> type_Z) :=
@@ -186,14 +200,18 @@ Section Expr.
   (* only require cast for the argument of (App f x) if:
      - f is not a cast
      - f is not mul_high (then, x = 2^width)
+     - f is not (lnot_modulo _) (then x is allowed to be 2^width)
      - f is not (nth_default ?d ?l) (i doesn't need to fit in a word) *)
   Definition require_cast_for_arg
              {var t} (e : @API.expr var t) : bool :=
     match e with
     | Zcast r => negb (range_good r)
-    | Zcast2 r1 r2 => 
+    | Zcast2 r1 r2 =>
       negb (range_good r1 && range_good r2)
     | expr.Ident _ ident.Z_mul_high => false
+    | expr.App
+        _ _ (expr.Ident _ ident.Z_lnot_modulo)
+        _ => false
     | expr.App
         _ _ (expr.App
                _ _ (expr.Ident _ (ident.List_nth_default _))
@@ -214,7 +232,7 @@ Section Expr.
     | _ => None
     end.
 
-  Fixpoint translate_ident
+  Definition translate_ident
            {t} (i : ident.ident t) : rtype t :=
     match i in ident.ident t0 return rtype t0 with
     | ident.fst _ _ => fst
@@ -224,6 +242,7 @@ Section Expr.
     | ident.Z_shiftr => rshiftr
     | ident.Z_shiftl => rshiftl
     | ident.Z_truncating_shiftl => rtruncating_shiftl
+    | ident.Z_lnot_modulo => rlnot_modulo
     | ident.Z_zselect => rselect
     | ident.Z_mul_high => rmul_high
     | ident.Z_cast => fun _ x => x
