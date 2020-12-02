@@ -159,6 +159,11 @@ Module Z.
   Definition twos_complement_pos m a :=
     dlet b := twos_complement_opp m a in sign_bit m b.
 
+  (* multiplication to bit width mab *)
+  Definition twos_complement_mul_aux ma mb mab a b :=
+    (sign_extend ma mab a) * (sign_extend mb mab b).
+
+  (* multiplication to bitwidth ma + mb *)
   Definition twos_complement_mul ma mb a b :=
-    (sign_extend ma (ma + mb) a) * (sign_extend mb (ma + mb) b).
+    twos_complement_mul_aux ma mb (ma + mb) a b.
 End Z.

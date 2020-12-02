@@ -476,7 +476,7 @@ Lemma twos_complement_zopp a m
       (Hm : 0 < m) (corner_case : Z.twos_complement m a <> - 2 ^ (m - 1)) :
   Z.twos_complement m (- a) = - Z.twos_complement m a.
 Proof.
-  pose proof Z.twos_complement_bounds a m Hm.
+  pose proof Z.twos_complement_bounds m a Hm.
   apply Z.twos_complement_spec; [lia|split]; [|lia].
   rewrite (PullPush.Z.opp_mod_mod (Z.twos_complement _ _)), Z.twos_complement_mod' by lia;
     apply PullPush.Z.opp_mod_mod. Qed.
@@ -484,7 +484,7 @@ Proof.
 Lemma twos_complement_opp_spec m a
       (Hm : 0 < m) (corner_case : Z.twos_complement m a <> - 2 ^ (m - 1)) :
   Z.twos_complement m (Z.twos_complement_opp m a) = - (Z.twos_complement m a).
-Proof. apply Z.twos_complement_spec; [lia|split]; [|pose proof Z.twos_complement_bounds a m Hm; lia].
+Proof. apply Z.twos_complement_spec; [lia|split]; [|pose proof Z.twos_complement_bounds m a Hm; lia].
        rewrite <- twos_complement_zopp, twos_complement_opp_correct, Z.twos_complement_mod', Z.mod_mod by (try apply Z.pow_nonzero; lia). reflexivity. Qed.
 
 (************************* *)
@@ -565,12 +565,9 @@ Lemma eval_twos_complement_sat_mod2 machine_wordsize n f
   (eval_twos_complement machine_wordsize n f) mod 2 = sat_mod2 f.
 Proof. unfold eval_twos_complement, Let_In; rewrite Z.twos_complement_mod2, eval_sat_mod2; nia. Qed.
 
-(** ******************************************************************************* *)
-(** This section is for the implementation and correctness of the divstep algorithm *)
-(** ******************************************************************************* *)
-
-Import WordByWordMontgomery.
-Import Positional.
+(** ****************************************** *)
+(** Alternative implementations of opp and pos *)
+(** ****************************************** *)
 
 (* This version does not introduce larger types unnecessarily *)
 Definition twos_complement_opp' m a :=
@@ -593,28 +590,9 @@ Lemma twos_complement_pos'_spec m a :
   twos_complement_pos' m a = Z.twos_complement_pos m a.
 Proof. unfold twos_complement_pos'. rewrite twos_complement_opp'_spec. reflexivity. Qed.
 
-Definition divstep_aux (machine_wordsize : Z) (sat_limbs mont_limbs : nat) (m : Z) (data : Z * (list Z) * (list Z) * (list Z) * (list Z)) :=
-  let '(d,f,g,v,r) := data in
-  dlet cond := Z.land (twos_complement_pos' machine_wordsize d) (sat_mod2 g) in
-  dlet d' := Z.zselect cond d (twos_complement_opp' machine_wordsize d) in
-  dlet f' := select cond f g in
-  dlet g' := select cond g (sat_opp machine_wordsize sat_limbs f) in
-  dlet v' := select cond v r in
-  let v'':= addmod machine_wordsize mont_limbs m v' v' in
-  dlet r' := select cond r (oppmod machine_wordsize mont_limbs m v) in
-  dlet g0 := sat_mod2 g' in
-  let d'' := (fst (Z.add_get_carry_full (2^machine_wordsize) d' 1)) in
-  dlet f'' := select g0 (sat_zero sat_limbs) f' in
-  let g'' := sat_arithmetic_shiftr1 machine_wordsize sat_limbs (sat_add machine_wordsize sat_limbs g' f'') in
-  dlet v''' := select g0 (sat_zero mont_limbs) v' in
-  let r'' := addmod machine_wordsize mont_limbs m r' v''' in
-    (d'',f',g'',v'',r'').
-
-Definition divstep machine_wordsize sat_limbs mont_limbs m d f g v r :=
-  divstep_aux machine_wordsize sat_limbs mont_limbs m (d, f, g, v, r).
-Definition divstep_safe machine_wordsize n :=
-  let sat_limbs := (n + 1)%nat in
-  divstep machine_wordsize sat_limbs n.
+(** ******************************************************************************* *)
+(** This section is for the implementation and correctness of the divstep algorithm *)
+(** ******************************************************************************* *)
 
 Definition divstep_spec d f g :=
   if (0 <? d) && Z.odd g
@@ -631,162 +609,38 @@ Definition divstep_spec_full m d f g v r :=
   then (1 - d, g, (g - f) / 2, 2 * r mod m, (r - v) mod m)
   else (1 + d, f, (g + (g mod 2) * f) / 2, 2 * v mod m, (r + (g mod 2) * v) mod m).
 
-Lemma divstep_g machine_wordsize sat_limbs mont_limbs m d f g v r
-      (mw0 : 0 < machine_wordsize)
-      (sat_limbs0 : (0 < sat_limbs)%nat)
-      (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
-      (Hf : length f = sat_limbs)
-      (Hg : length g = sat_limbs)
-      (corner_case : Z.twos_complement machine_wordsize d <> - 2 ^ (machine_wordsize - 1))
-      (overflow_f : - 2 ^ (machine_wordsize * sat_limbs - 2) <
-                    eval_twos_complement machine_wordsize sat_limbs f <
-                    2 ^ (machine_wordsize * sat_limbs - 2))
-      (overflow_g : - 2 ^ (machine_wordsize * sat_limbs - 2) <
-                    eval_twos_complement machine_wordsize sat_limbs g <
-                    2 ^ (machine_wordsize * sat_limbs - 2))
-      (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize)
-      (Hg2 : forall z, In z g -> 0 <= z < 2^machine_wordsize) :
-  let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
-  eval_twos_complement machine_wordsize sat_limbs g1 =
-  snd (divstep_spec
-         (Z.twos_complement machine_wordsize d)
-         (eval_twos_complement machine_wordsize sat_limbs f)
-         (eval_twos_complement machine_wordsize sat_limbs g)).
-Proof.
-  set (bw := machine_wordsize * Z.of_nat sat_limbs) in *.
+Module Export WordByWordMontgomery.
 
-  simpl.
-  assert (0 < Z.of_nat sat_limbs) by lia.
-  assert (bw0 : 0 < bw) by nia.
-  assert (bw1 : 1 < bw) by (destruct (dec (bw = 1)); rewrite ?e in *; simpl in *; lia).
-  assert (2 ^ machine_wordsize = 2 * 2 ^ (machine_wordsize - 1))
-    by (rewrite Pow.Z.pow_mul_base, Z.sub_simpl_r; lia).
-  assert (0 < 2 ^ bw) by (apply Z.pow_pos_nonneg; lia).
-  assert (2 ^ (bw - 2) <= 2 ^ (bw - 1)) by (apply Z.pow_le_mono; lia).
+  Import WordByWordMontgomery.WordByWordMontgomery.
+  Import Positional.
 
-  Hint Rewrite length_sat_add length_sat_opp length_select : distr_length.
+  Definition divstep_aux (machine_wordsize : Z) (sat_limbs mont_limbs : nat) (m : Z) (data : Z * (list Z) * (list Z) * (list Z) * (list Z)) :=
+    let '(d,f,g,v,r) := data in
+    dlet cond := Z.land (twos_complement_pos' machine_wordsize d) (sat_mod2 g) in
+    dlet d' := Z.zselect cond d (twos_complement_opp' machine_wordsize d) in
+    dlet f' := select cond f g in
+    dlet g' := select cond g (sat_opp machine_wordsize sat_limbs f) in
+    dlet v' := select cond v r in
+    let v'':= addmod machine_wordsize mont_limbs m v' v' in
+    dlet r' := select cond r (oppmod machine_wordsize mont_limbs m v) in
+    dlet g0 := sat_mod2 g' in
+    let d'' := (fst (Z.add_get_carry_full (2^machine_wordsize) d' 1)) in
+    dlet f'' := select g0 (sat_zero sat_limbs) f' in
+    let g'' := sat_arithmetic_shiftr1 machine_wordsize sat_limbs (sat_add machine_wordsize sat_limbs g' f'') in
+    dlet v''' := select g0 (sat_zero mont_limbs) v' in
+    let r'' := addmod machine_wordsize mont_limbs m r' v''' in
+    (d'',f',g'',v'',r'').
 
-  rewrite eval_twos_complement_sat_arithmetic_shiftr1; distr_length; autorewrite with distr_length; try nia.
-  rewrite eval_twos_complement_sat_add; auto; try (autorewrite with distr_length; lia).
-  rewrite !eval_twos_complement_select; auto; try (autorewrite with distr_length; lia).
-  rewrite eval_twos_complement_sat_opp; auto; try (autorewrite with distr_length; lia).
-  rewrite select_push; try (autorewrite with distr_length; lia).
+  Definition divstep machine_wordsize sat_limbs mont_limbs m d f g v r :=
+    divstep_aux machine_wordsize sat_limbs mont_limbs m (d, f, g, v, r).
 
-  rewrite sat_opp_mod2; auto.
-  unfold divstep_spec.
-  rewrite twos_complement_pos'_spec.
-  rewrite twos_complement_pos_spec; auto.
-  rewrite <- !(eval_twos_complement_sat_mod2 machine_wordsize sat_limbs); auto.
-  rewrite !Zmod_odd; auto.
-
-  set (g' := eval_twos_complement machine_wordsize sat_limbs g) in *.
-  set (f' := eval_twos_complement machine_wordsize sat_limbs f) in *.
-  assert (corner_case_f : f' <> - 2 ^ (bw - 1)) by
-      (replace (- _) with (- (2 * 2 ^ (bw - 2))); rewrite ?Pow.Z.pow_mul_base; ring_simplify (bw - 2 + 1); nia).
-
-  destruct (0 <? Z.twos_complement machine_wordsize d);
-    destruct (Z.odd g') eqn:g'_odd; rewrite ?fodd, ?eval_sat_zero; auto.
-  - simpl; rewrite Z.add_comm; reflexivity.
-  - simpl; rewrite eval_twos_complement_sat_zero; auto.
-  - rewrite Z.mul_1_l; simpl; reflexivity.
-  - simpl; rewrite eval_twos_complement_sat_zero; auto.
-  - replace (_ * _) with bw by reflexivity; lia.
-  - rewrite twos_complement_pos'_spec.
-    let v := constr:(eval_twos_complement
-                       machine_wordsize sat_limbs
-                       (select (Z.twos_complement_pos machine_wordsize d &' sat_mod2 g) g (sat_opp machine_wordsize sat_limbs f))) in
-    let v' := (eval cbv [eval_twos_complement Let_In] in v) in
-    change v' with v.
-    rewrite eval_twos_complement_select; try apply length_sat_opp; auto.
-    destruct (dec (_)); replace (machine_wordsize * _) with bw by reflexivity;
-    try rewrite eval_twos_complement_sat_opp; auto; replace (machine_wordsize * _) with bw by reflexivity; lia.
-  - rewrite twos_complement_pos'_spec.
-    let v := constr:(eval_twos_complement
-                       machine_wordsize sat_limbs
-                       (select (sat_mod2 (select (Z.twos_complement_pos machine_wordsize d &' sat_mod2 g) g (sat_opp machine_wordsize sat_limbs f)))
-                               (sat_zero sat_limbs) (select (Z.twos_complement_pos machine_wordsize d &' sat_mod2 g) f g))) in
-    let v' := (eval cbv [eval_twos_complement Let_In] in v) in
-    change v' with v.
-    rewrite eval_twos_complement_select; try apply length_sat_zero; try apply length_select; auto.
-    destruct (dec (_)); try rewrite eval_twos_complement_sat_zero; try rewrite eval_twos_complement_select;
-      replace (machine_wordsize * _) with bw by reflexivity; try lia; destruct (dec (_)); lia.
-  - apply sat_add_bounds; repeat (rewrite ?length_sat_opp, ?(length_select sat_limbs), ?length_sat_zero; auto); lia. Qed.
-
-Lemma divstep_d machine_wordsize sat_limbs mont_limbs m d f g v r
-      (mw1 : 1 < machine_wordsize)
-      (sat_limbs0 : (0 < sat_limbs)%nat)
-      (Hg : length g = sat_limbs)
-      (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
-                    Z.twos_complement machine_wordsize d <
-                    2 ^ (machine_wordsize - 1) - 1) :
-  let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
-  Z.twos_complement machine_wordsize d1 =
-  fst (fst (divstep_spec (Z.twos_complement machine_wordsize d)
-                           (eval_twos_complement machine_wordsize sat_limbs f)
-                           (eval_twos_complement machine_wordsize sat_limbs g))).
-Proof.
-  assert (helper0 : 0 < Z.of_nat sat_limbs) by lia.
-  assert (mw0 : 0 < machine_wordsize) by lia.
-  assert (helper : 1 < 2 ^ machine_wordsize) by (apply Zpow_facts.Zpower_gt_1; lia).
-  assert (helper2 : 1 < 2 ^ (machine_wordsize - 1)) by (apply Zpow_facts.Zpower_gt_1; lia).
-  assert (helper3 : 2 ^ machine_wordsize = 2 * 2 ^ (machine_wordsize - 1))
-    by (rewrite Pow.Z.pow_mul_base, Z.sub_simpl_r; lia).
-
-  simpl; unfold divstep_spec.
-  rewrite AddGetCarry.Z.add_get_carry_full_mod.
-  rewrite twos_complement_pos'_spec.
-  rewrite twos_complement_opp'_spec.
-  rewrite twos_complement_pos_spec, <- (eval_twos_complement_sat_mod2 machine_wordsize sat_limbs), Zmod_odd by nia.
-  fold (eval_twos_complement machine_wordsize sat_limbs g); set (g' := eval_twos_complement machine_wordsize sat_limbs g) in *.
-  destruct ((0 <? Z.twos_complement machine_wordsize d) && (Z.odd g')) eqn:E.
-  - apply andb_prop in E. destruct E; rewrite H, H0. simpl Z.b2z; simpl Z.land; cbv [fst].
-    unfold Z.zselect. simpl (if _ =? _ then _ else _).
-    rewrite twos_complement_opp_correct, Z.twos_complement_mod, Z.twos_complement_add_full, Z.twos_complement_mod, twos_complement_zopp, Z.twos_complement_one; try lia.
-    rewrite Z.twos_complement_mod, twos_complement_zopp, Z.twos_complement_one; lia.
-  - apply andb_false_iff in E.
-    destruct E; rewrite H;
-      unfold Z.zselect; cbv [fst]; simpl (if _ =? _ then _ else _);
-        [destruct (Z.odd g') | rewrite Z.land_0_r; simpl (if _ =? _ then _ else _)];
-        rewrite Z.twos_complement_mod, Z.twos_complement_add_full, Z.twos_complement_one; rewrite ?Z.twos_complement_one; lia. Qed.
-
-Lemma divstep_f machine_wordsize sat_limbs mont_limbs m d f g v r
-      (mw0 : 0 < machine_wordsize)
-      (Hf : length f = sat_limbs)
-      (Hg : length g = sat_limbs)
-      (corner_case : Z.twos_complement machine_wordsize d <> - 2 ^ (machine_wordsize - 1)) :
-  let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
-  eval_twos_complement machine_wordsize sat_limbs f1 =
-  snd (fst (divstep_spec (Z.twos_complement machine_wordsize d)
-                           (eval_twos_complement machine_wordsize sat_limbs f)
-                           (eval_twos_complement machine_wordsize sat_limbs g))).
-Proof.
-  destruct sat_limbs. subst.
-  unfold eval_twos_complement, Let_In.
-  rewrite !eval0; rewrite Z.mul_0_r.
-  replace (Z.twos_complement 0 0) with (-1). unfold divstep_spec.
-  destruct (0 <? Z.twos_complement machine_wordsize d); reflexivity. reflexivity.
-
-  unfold divstep_spec.
-  simpl.
-
-  set (n' := S sat_limbs) in *.
-  assert (0 < n')%nat by apply Nat.lt_0_succ.
-  rewrite twos_complement_pos'_spec.
-
-  rewrite eval_twos_complement_select, twos_complement_pos_spec, <- (eval_twos_complement_sat_mod2 machine_wordsize n'), Zmod_odd; auto.
-  fold (eval_twos_complement machine_wordsize n' g).
-  destruct (0 <? Z.twos_complement machine_wordsize d); destruct (Z.odd (eval_twos_complement machine_wordsize n' g));
-    try reflexivity; lia. Qed.
-
-Theorem divstep_correct machine_wordsize sat_limbs mont_limbs m d f g v r
-        (mw1 : 1 < machine_wordsize)
+  Lemma divstep_g machine_wordsize sat_limbs mont_limbs m d f g v r
+        (mw0 : 0 < machine_wordsize)
         (sat_limbs0 : (0 < sat_limbs)%nat)
         (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
         (Hf : length f = sat_limbs)
         (Hg : length g = sat_limbs)
-        (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
-                    Z.twos_complement machine_wordsize d <
-                    2 ^ (machine_wordsize - 1) - 1)
+        (corner_case : Z.twos_complement machine_wordsize d <> - 2 ^ (machine_wordsize - 1))
         (overflow_f : - 2 ^ (machine_wordsize * sat_limbs - 2) <
                       eval_twos_complement machine_wordsize sat_limbs f <
                       2 ^ (machine_wordsize * sat_limbs - 2))
@@ -795,205 +649,348 @@ Theorem divstep_correct machine_wordsize sat_limbs mont_limbs m d f g v r
                       2 ^ (machine_wordsize * sat_limbs - 2))
         (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize)
         (Hg2 : forall z, In z g -> 0 <= z < 2^machine_wordsize) :
-  let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
-  (Z.twos_complement machine_wordsize d1,
-   eval_twos_complement machine_wordsize sat_limbs f1,
-   eval_twos_complement machine_wordsize sat_limbs g1) =
-  divstep_spec (Z.twos_complement machine_wordsize d)
-               (eval_twos_complement machine_wordsize sat_limbs f)
-               (eval_twos_complement machine_wordsize sat_limbs g).
-Proof.
-  assert (0 < machine_wordsize) by lia. simpl.
-  apply injective_projections.
-  apply injective_projections.
-  rewrite <- (divstep_d _ _ mont_limbs m _ _ _ v r); auto.
-  rewrite <- (divstep_f _ _ mont_limbs m _ _ _ v r); auto; lia.
-  rewrite <- (divstep_g _ _ mont_limbs m _ _ _ v r); auto; lia. Qed.
+    let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
+    eval_twos_complement machine_wordsize sat_limbs g1 =
+    snd (divstep_spec
+           (Z.twos_complement machine_wordsize d)
+           (eval_twos_complement machine_wordsize sat_limbs f)
+           (eval_twos_complement machine_wordsize sat_limbs g)).
+  Proof.
+    set (bw := machine_wordsize * Z.of_nat sat_limbs) in *.
 
-Lemma divstep_v machine_wordsize sat_limbs mont_limbs m (r' : Z) m' d f g v r
-      (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
-
-      (r'_correct : (2 ^ machine_wordsize * r') mod m = 1)
-      (m'_correct : (m * m') mod 2 ^ machine_wordsize = -1 mod 2 ^ machine_wordsize)
-      (m_big : 1 < m)
-      (m_small : m < (2 ^ machine_wordsize) ^ Z.of_nat mont_limbs)
-      (Hv2 : valid machine_wordsize mont_limbs m v)
-      (Hr2 : valid machine_wordsize mont_limbs m r)
-      (mw0 : 0 < machine_wordsize)
-      (sat_limbs0 : (0 < sat_limbs)%nat)
-      (mont_limbs0 : (0 < mont_limbs)%nat)
-      (Hv : length v = mont_limbs)
-      (Hr : length r = mont_limbs)
-      (Hg : length g = sat_limbs)
-      (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
-                    Z.twos_complement machine_wordsize d <
-                    2 ^ (machine_wordsize - 1) - 1) :
-  let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
-  @WordByWordMontgomery.eval machine_wordsize mont_limbs
-                        (from_montgomerymod machine_wordsize mont_limbs m m' v1) mod m =
-  fst (divstep_spec2 m (Z.twos_complement machine_wordsize d)
-                (eval_twos_complement machine_wordsize sat_limbs g)
-                (@WordByWordMontgomery.eval machine_wordsize mont_limbs
-                                       (from_montgomerymod machine_wordsize mont_limbs m m' v))
-                (@WordByWordMontgomery.eval machine_wordsize mont_limbs
-                                       (from_montgomerymod machine_wordsize mont_limbs m m' r))).
-Proof.
-  assert (sat_limbs <> 0%nat) by lia.
-  assert (mont_limbs <> 0%nat) by lia.
-  simpl.
-  rewrite twos_complement_pos'_spec.
-
-  rewrite twos_complement_pos_spec, <- (eval_twos_complement_sat_mod2 machine_wordsize sat_limbs) by lia.
-  rewrite Zmod_odd, (select_eq (uweight machine_wordsize) _ mont_limbs); auto.
-  unfold divstep_spec2.
-  destruct (0 <? Z.twos_complement machine_wordsize d);
-    destruct (Z.odd (eval_twos_complement machine_wordsize sat_limbs g));
-    rewrite ?(eval_addmod _ _ _ r'), ?Z.add_diag; auto. Qed.
-
-Lemma nonzero_zero n :
-  nonzeromod (sat_zero n) = 0.
-Proof. unfold nonzero, sat_zero; induction n; auto. Qed.
-
-Lemma zero_valid machine_wordsize n m
-      (mw0 : 0 < machine_wordsize)
-      (m0 : 0 < m) :
-  valid machine_wordsize n m (sat_zero n).
-Proof.
-  unfold valid, small, WordByWordMontgomery.eval.
-  rewrite eval_sat_zero, partition_0; try split; auto; lia. Qed.
-
-Lemma divstep_r machine_wordsize sat_limbs mont_limbs m (r' : Z) m' d f g v r
-      (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
-      (r'_correct : (2 ^ machine_wordsize * r') mod m = 1)
-      (m'_correct : (m * m') mod 2 ^ machine_wordsize = -1 mod 2 ^ machine_wordsize)
-      (m_big : 1 < m)
-      (m_small : m < (2 ^ machine_wordsize) ^ Z.of_nat mont_limbs)
-      (Hv2 : valid machine_wordsize mont_limbs m v)
-      (Hr2 : valid machine_wordsize mont_limbs m r)
-      (mw0 : 0 < machine_wordsize)
-      (sat_limbs0 : (0 < sat_limbs)%nat)
-      (mont_limbs0 : (0 < mont_limbs)%nat)
-      (Hv : length v = mont_limbs)
-      (Hr : length r = mont_limbs)
-      (Hf : length f = sat_limbs)
-      (Hg : length g = sat_limbs)
-      (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
-                    Z.twos_complement machine_wordsize d <
-                    2 ^ (machine_wordsize - 1) - 1)
-      (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize) :
-  let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
-  @WordByWordMontgomery.eval machine_wordsize mont_limbs
-                        (from_montgomerymod machine_wordsize mont_limbs m m' r1) mod m =
-  snd (divstep_spec2 m (Z.twos_complement machine_wordsize d)
-                (eval_twos_complement machine_wordsize sat_limbs g)
-                (@WordByWordMontgomery.eval machine_wordsize mont_limbs
-                                       (from_montgomerymod machine_wordsize mont_limbs m m' v))
-                (@WordByWordMontgomery.eval machine_wordsize mont_limbs
-                                       (from_montgomerymod machine_wordsize mont_limbs m m' r))).
-Proof.
-  assert (sat_limbs0' : (sat_limbs <> 0%nat)) by lia.
-  assert (mont_limbs0' : mont_limbs <> 0%nat) by lia.
-  unfold divstep_spec2.
-  pose proof (oppmod_correct machine_wordsize mont_limbs m r' m' r'_correct m'_correct mw0 m_big (ltac:(lia)) m_small) as H.
-  destruct H as [H1 H2].
-  assert (zero_valid : valid machine_wordsize mont_limbs m (sat_zero mont_limbs)) by (apply zero_valid; lia).
-  pose proof (nonzero_zero mont_limbs) as H3.
-  rewrite (nonzeromod_correct machine_wordsize mont_limbs m r' m') in H3
-    by (try apply zero_valid; lia).
-  cbn -[Z.mul oppmod sat_opp select].
-  rewrite select_push; rewrite ?length_sat_opp; auto.
-  rewrite sat_opp_mod2; auto.
-  rewrite twos_complement_pos'_spec.
-  rewrite twos_complement_pos_spec, <- !(eval_twos_complement_sat_mod2 machine_wordsize sat_limbs) by lia.
-  rewrite !Zmod_odd, !(select_eq (uweight machine_wordsize) _ mont_limbs), fodd;
-    try apply length_select; auto.
-  destruct (0 <? Z.twos_complement machine_wordsize d);
-    destruct (Z.odd (eval_twos_complement machine_wordsize sat_limbs g)); cbn -[Z.mul oppmod].
-  - rewrite (eval_addmod _ _ _ r'); auto.
-    rewrite <- Zplus_mod_idemp_l; auto.
-    rewrite (eval_oppmod _ _ _ r'); auto.
-    rewrite Zplus_mod_idemp_l; auto.
-    rewrite Z.add_comm; unfold Z.sub; auto.
-  - rewrite (eval_addmod _ _ _ r'); auto.
-    rewrite <- Zplus_mod_idemp_r; auto.
-    rewrite H3.
-    rewrite Z.mul_0_l, Z.add_0_r; auto.
-  - rewrite (eval_addmod _ _ _ r'); auto.
-    rewrite Z.mul_1_l; auto.
-  - rewrite (eval_addmod _ _ _ r'); auto.
-    rewrite <- Zplus_mod_idemp_r; auto.
-    rewrite H3.
-    rewrite Z.mul_0_l, Z.add_0_r; auto.
-  - apply length_sat_zero.
-  - unfold oppmod, WordByWordMontgomery.opp,
-    WordByWordMontgomery.sub, Rows.sub_then_maybe_add, Rows.add.
-    destruct (Rows.sub (uweight machine_wordsize) mont_limbs (zeros mont_limbs)) eqn:E.
-    destruct (Rows.flatten (uweight machine_wordsize) mont_limbs
-                           [l; zselect (2 ^ machine_wordsize - 1) (- z) (Partition.partition (uweight machine_wordsize) mont_limbs m)]) eqn:E2.
     simpl.
-    inversion E; subst.
-    inversion E2.
-    apply Rows.length_sum_rows.
-    apply (uwprops machine_wordsize mw0).
-    apply Rows.length_sum_rows.
-    apply (uwprops machine_wordsize mw0).
-    apply length_zeros.
-    apply map_length.
-    rewrite length_zselect.
-    apply length_partition. Qed.
+    assert (0 < Z.of_nat sat_limbs) by lia.
+    assert (bw0 : 0 < bw) by nia.
+    assert (bw1 : 1 < bw) by (destruct (dec (bw = 1)); rewrite ?e in *; simpl in *; lia).
+    assert (2 ^ machine_wordsize = 2 * 2 ^ (machine_wordsize - 1))
+      by (rewrite Pow.Z.pow_mul_base, Z.sub_simpl_r; lia).
+    assert (0 < 2 ^ bw) by (apply Z.pow_pos_nonneg; lia).
+    assert (2 ^ (bw - 2) <= 2 ^ (bw - 1)) by (apply Z.pow_le_mono; lia).
 
-Lemma divstep_spec_divstep_spec_full_d m d f g v r :
-  fst (fst (divstep_spec d f g)) = fst (fst (fst (fst (divstep_spec_full m d f g v r)))).
-Proof. unfold divstep_spec, divstep_spec_full.
-       destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+    Hint Rewrite length_sat_add length_sat_opp length_select : distr_length.
 
-Lemma divstep_spec_divstep_spec_full_f m d f g v r :
-  snd (fst (divstep_spec d f g)) = snd (fst (fst (fst (divstep_spec_full m d f g v r)))).
-Proof. unfold divstep_spec, divstep_spec_full.
-       destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+    rewrite eval_twos_complement_sat_arithmetic_shiftr1; distr_length; autorewrite with distr_length; try nia.
+    rewrite eval_twos_complement_sat_add; auto; try (autorewrite with distr_length; lia).
+    rewrite !eval_twos_complement_select; auto; try (autorewrite with distr_length; lia).
+    rewrite eval_twos_complement_sat_opp; auto; try (autorewrite with distr_length; lia).
+    rewrite select_push; try (autorewrite with distr_length; lia).
 
-Lemma divstep_spec_divstep_spec_full_g m d f g v r :
-  snd (divstep_spec d f g) = snd (fst (fst (divstep_spec_full m d f g v r))).
-Proof. unfold divstep_spec, divstep_spec_full.
-       destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+    rewrite sat_opp_mod2; auto.
+    unfold divstep_spec.
+    rewrite twos_complement_pos'_spec.
+    rewrite twos_complement_pos_spec; auto.
+    rewrite <- !(eval_twos_complement_sat_mod2 machine_wordsize sat_limbs); auto.
+    rewrite !Zmod_odd; auto.
 
-Lemma divstep_spec2_divstep_spec_full_v m d f g v r :
-  fst (divstep_spec2 m d g v r) = snd (fst (divstep_spec_full m d f g v r)).
-Proof. unfold divstep_spec2, divstep_spec_full.
-       destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+    set (g' := eval_twos_complement machine_wordsize sat_limbs g) in *.
+    set (f' := eval_twos_complement machine_wordsize sat_limbs f) in *.
+    assert (corner_case_f : f' <> - 2 ^ (bw - 1)) by
+        (replace (- _) with (- (2 * 2 ^ (bw - 2))); rewrite ?Pow.Z.pow_mul_base; ring_simplify (bw - 2 + 1); nia).
 
-Lemma divstep_spec2_divstep_spec_full_r m d f g v r :
-  snd (divstep_spec2 m d g v r) = snd (divstep_spec_full m d f g v r).
-Proof. unfold divstep_spec2, divstep_spec_full.
-       destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+    destruct (0 <? Z.twos_complement machine_wordsize d);
+      destruct (Z.odd g') eqn:g'_odd; rewrite ?fodd, ?eval_sat_zero; auto.
+    - simpl; rewrite Z.add_comm; reflexivity.
+    - simpl; rewrite eval_twos_complement_sat_zero; auto.
+    - rewrite Z.mul_1_l; simpl; reflexivity.
+    - simpl; rewrite eval_twos_complement_sat_zero; auto.
+    - replace (_ * _) with bw by reflexivity; lia.
+    - rewrite twos_complement_pos'_spec.
+      fold (eval_twos_complement machine_wordsize sat_limbs
+                                 (select (Z.twos_complement_pos machine_wordsize d &' sat_mod2 g) g (sat_opp machine_wordsize sat_limbs f))).
+      rewrite eval_twos_complement_select; try apply length_sat_opp; auto.
+      destruct (dec (_)); replace (machine_wordsize * _) with bw by reflexivity;
+        try rewrite eval_twos_complement_sat_opp; auto; replace (machine_wordsize * _) with bw by reflexivity; lia.
+    - rewrite twos_complement_pos'_spec.
+      fold (eval_twos_complement machine_wordsize sat_limbs
+                                 (select (sat_mod2 (select (Z.twos_complement_pos machine_wordsize d &' sat_mod2 g) g (sat_opp machine_wordsize sat_limbs f)))
+                                         (sat_zero sat_limbs) (select (Z.twos_complement_pos machine_wordsize d &' sat_mod2 g) f g))).
+      rewrite eval_twos_complement_select; try apply length_sat_zero; try apply length_select; auto.
+      destruct (dec (_)); try rewrite eval_twos_complement_sat_zero; try rewrite eval_twos_complement_select;
+        replace (machine_wordsize * _) with bw by reflexivity; try lia; destruct (dec (_)); lia.
+    - apply sat_add_bounds; repeat (rewrite ?length_sat_opp, ?(length_select sat_limbs), ?length_sat_zero; auto); lia. Qed.
 
-Theorem divstep_correct_full machine_wordsize sat_limbs mont_limbs m r' m' d f g v r
-      (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
-      (r'_correct : (2 ^ machine_wordsize * r') mod m = 1)
-      (m'_correct : (m * m') mod 2 ^ machine_wordsize = -1 mod 2 ^ machine_wordsize)
-      (m_big : 1 < m)
-      (m_small : m < (2 ^ machine_wordsize) ^ Z.of_nat mont_limbs)
-      (mw1 : 1 < machine_wordsize)
-      (sat_limbs0 : (0 < sat_limbs)%nat)
-      (mont_limbs0 : (0 < mont_limbs)%nat)
-      (Hv : length v = mont_limbs)
-      (Hr : length r = mont_limbs)
-      (Hf : length f = sat_limbs)
-      (Hg : length g = sat_limbs)
-      (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
-                    Z.twos_complement machine_wordsize d <
-                    2 ^ (machine_wordsize - 1) - 1)
-      (overflow_f : - 2 ^ (machine_wordsize * sat_limbs - 2) <
-                    eval_twos_complement machine_wordsize sat_limbs f <
-                    2 ^ (machine_wordsize * sat_limbs - 2))
-      (overflow_g : - 2 ^ (machine_wordsize * sat_limbs - 2) <
-                    eval_twos_complement machine_wordsize sat_limbs g <
-                    2 ^ (machine_wordsize * sat_limbs - 2))
-      (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize)
-      (Hg2 : forall z, In z g -> 0 <= z < 2^machine_wordsize)
-      (Hv2 : valid machine_wordsize mont_limbs m v)
-      (Hr2 : valid machine_wordsize mont_limbs m r) :
-  let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
+  Lemma divstep_d machine_wordsize sat_limbs mont_limbs m d f g v r
+        (mw1 : 1 < machine_wordsize)
+        (sat_limbs0 : (0 < sat_limbs)%nat)
+        (Hg : length g = sat_limbs)
+        (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
+                      Z.twos_complement machine_wordsize d <
+                      2 ^ (machine_wordsize - 1) - 1) :
+    let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
+    Z.twos_complement machine_wordsize d1 =
+    fst (fst (divstep_spec (Z.twos_complement machine_wordsize d)
+                           (eval_twos_complement machine_wordsize sat_limbs f)
+                           (eval_twos_complement machine_wordsize sat_limbs g))).
+  Proof.
+    assert (helper0 : 0 < Z.of_nat sat_limbs) by lia.
+    assert (mw0 : 0 < machine_wordsize) by lia.
+    assert (helper : 1 < 2 ^ machine_wordsize) by (apply Zpow_facts.Zpower_gt_1; lia).
+    assert (helper2 : 1 < 2 ^ (machine_wordsize - 1)) by (apply Zpow_facts.Zpower_gt_1; lia).
+    assert (helper3 : 2 ^ machine_wordsize = 2 * 2 ^ (machine_wordsize - 1))
+      by (rewrite Pow.Z.pow_mul_base, Z.sub_simpl_r; lia).
+
+    simpl; unfold divstep_spec.
+    rewrite AddGetCarry.Z.add_get_carry_full_mod.
+    rewrite twos_complement_pos'_spec.
+    rewrite twos_complement_opp'_spec.
+    rewrite twos_complement_pos_spec, <- (eval_twos_complement_sat_mod2 machine_wordsize sat_limbs), Zmod_odd by nia.
+    fold (eval_twos_complement machine_wordsize sat_limbs g); set (g' := eval_twos_complement machine_wordsize sat_limbs g) in *.
+    destruct ((0 <? Z.twos_complement machine_wordsize d) && (Z.odd g')) eqn:E.
+    - apply andb_prop in E. destruct E; rewrite H, H0. simpl Z.b2z; simpl Z.land; cbv [fst].
+      unfold Z.zselect. simpl (if _ =? _ then _ else _).
+      rewrite twos_complement_opp_correct, Z.twos_complement_mod, Z.twos_complement_add_full, Z.twos_complement_mod, twos_complement_zopp, Z.twos_complement_one; try lia.
+      rewrite Z.twos_complement_mod, twos_complement_zopp, Z.twos_complement_one; lia.
+    - apply andb_false_iff in E.
+      destruct E; rewrite H;
+        unfold Z.zselect; cbv [fst]; simpl (if _ =? _ then _ else _);
+          [destruct (Z.odd g') | rewrite Z.land_0_r; simpl (if _ =? _ then _ else _)];
+          rewrite Z.twos_complement_mod, Z.twos_complement_add_full, Z.twos_complement_one; rewrite ?Z.twos_complement_one; lia. Qed.
+
+  Lemma divstep_f machine_wordsize sat_limbs mont_limbs m d f g v r
+        (mw0 : 0 < machine_wordsize)
+        (Hf : length f = sat_limbs)
+        (Hg : length g = sat_limbs)
+        (corner_case : Z.twos_complement machine_wordsize d <> - 2 ^ (machine_wordsize - 1)) :
+    let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
+    eval_twos_complement machine_wordsize sat_limbs f1 =
+    snd (fst (divstep_spec (Z.twos_complement machine_wordsize d)
+                           (eval_twos_complement machine_wordsize sat_limbs f)
+                           (eval_twos_complement machine_wordsize sat_limbs g))).
+  Proof.
+    destruct sat_limbs. subst.
+    unfold eval_twos_complement.
+    rewrite !eval0; rewrite Z.mul_0_r.
+    replace (Z.twos_complement 0 0) with (-1). unfold divstep_spec.
+    destruct (0 <? Z.twos_complement machine_wordsize d); reflexivity. reflexivity.
+
+    unfold divstep_spec.
+    simpl.
+
+    set (n' := S sat_limbs) in *.
+    assert (0 < n')%nat by apply Nat.lt_0_succ.
+    rewrite twos_complement_pos'_spec.
+
+    rewrite eval_twos_complement_select, twos_complement_pos_spec, <- (eval_twos_complement_sat_mod2 machine_wordsize n'), Zmod_odd; auto.
+    fold (eval_twos_complement machine_wordsize n' g).
+    destruct (0 <? Z.twos_complement machine_wordsize d); destruct (Z.odd (eval_twos_complement machine_wordsize n' g));
+      try reflexivity; lia. Qed.
+
+  Theorem divstep_correct machine_wordsize sat_limbs mont_limbs m d f g v r
+          (mw1 : 1 < machine_wordsize)
+          (sat_limbs0 : (0 < sat_limbs)%nat)
+          (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
+          (Hf : length f = sat_limbs)
+          (Hg : length g = sat_limbs)
+          (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
+                        Z.twos_complement machine_wordsize d <
+                        2 ^ (machine_wordsize - 1) - 1)
+          (overflow_f : - 2 ^ (machine_wordsize * sat_limbs - 2) <
+                        eval_twos_complement machine_wordsize sat_limbs f <
+                        2 ^ (machine_wordsize * sat_limbs - 2))
+          (overflow_g : - 2 ^ (machine_wordsize * sat_limbs - 2) <
+                        eval_twos_complement machine_wordsize sat_limbs g <
+                        2 ^ (machine_wordsize * sat_limbs - 2))
+          (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize)
+          (Hg2 : forall z, In z g -> 0 <= z < 2^machine_wordsize) :
+    let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
+    (Z.twos_complement machine_wordsize d1,
+     eval_twos_complement machine_wordsize sat_limbs f1,
+     eval_twos_complement machine_wordsize sat_limbs g1) =
+    divstep_spec (Z.twos_complement machine_wordsize d)
+                 (eval_twos_complement machine_wordsize sat_limbs f)
+                 (eval_twos_complement machine_wordsize sat_limbs g).
+  Proof.
+    assert (0 < machine_wordsize) by lia. simpl.
+    apply injective_projections.
+    apply injective_projections.
+    rewrite <- (divstep_d _ _ mont_limbs m _ _ _ v r); auto.
+    rewrite <- (divstep_f _ _ mont_limbs m _ _ _ v r); auto; lia.
+    rewrite <- (divstep_g _ _ mont_limbs m _ _ _ v r); auto; lia. Qed.
+
+  Lemma divstep_v machine_wordsize sat_limbs mont_limbs m (r' : Z) m' d f g v r
+        (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
+
+        (r'_correct : (2 ^ machine_wordsize * r') mod m = 1)
+        (m'_correct : (m * m') mod 2 ^ machine_wordsize = -1 mod 2 ^ machine_wordsize)
+        (m_big : 1 < m)
+        (m_small : m < (2 ^ machine_wordsize) ^ Z.of_nat mont_limbs)
+        (Hv2 : valid machine_wordsize mont_limbs m v)
+        (Hr2 : valid machine_wordsize mont_limbs m r)
+        (mw0 : 0 < machine_wordsize)
+        (sat_limbs0 : (0 < sat_limbs)%nat)
+        (mont_limbs0 : (0 < mont_limbs)%nat)
+        (Hv : length v = mont_limbs)
+        (Hr : length r = mont_limbs)
+        (Hg : length g = sat_limbs)
+        (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
+                      Z.twos_complement machine_wordsize d <
+                      2 ^ (machine_wordsize - 1) - 1) :
+    let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
+    @WordByWordMontgomery.eval machine_wordsize mont_limbs
+                          (from_montgomerymod machine_wordsize mont_limbs m m' v1) mod m =
+    fst (divstep_spec2 m (Z.twos_complement machine_wordsize d)
+                       (eval_twos_complement machine_wordsize sat_limbs g)
+                       (@WordByWordMontgomery.eval machine_wordsize mont_limbs
+                                              (from_montgomerymod machine_wordsize mont_limbs m m' v))
+                       (@WordByWordMontgomery.eval machine_wordsize mont_limbs
+                                              (from_montgomerymod machine_wordsize mont_limbs m m' r))).
+  Proof.
+    assert (sat_limbs <> 0%nat) by lia.
+    assert (mont_limbs <> 0%nat) by lia.
+    simpl.
+    rewrite twos_complement_pos'_spec.
+
+    rewrite twos_complement_pos_spec, <- (eval_twos_complement_sat_mod2 machine_wordsize sat_limbs) by lia.
+    rewrite Zmod_odd, (select_eq (uweight machine_wordsize) _ mont_limbs); auto.
+    unfold divstep_spec2.
+    destruct (0 <? Z.twos_complement machine_wordsize d);
+      destruct (Z.odd (eval_twos_complement machine_wordsize sat_limbs g));
+      rewrite ?(eval_addmod _ _ _ r'), ?Z.add_diag; auto. Qed.
+
+  Lemma nonzero_zero n :
+    nonzeromod (sat_zero n) = 0.
+  Proof. unfold nonzero, sat_zero; induction n; auto. Qed.
+
+  Lemma zero_valid machine_wordsize n m
+        (mw0 : 0 < machine_wordsize)
+        (m0 : 0 < m) :
+    valid machine_wordsize n m (sat_zero n).
+  Proof.
+    unfold valid, small, WordByWordMontgomery.eval.
+    rewrite eval_sat_zero, partition_0; try split; auto; lia. Qed.
+
+  Lemma divstep_r machine_wordsize sat_limbs mont_limbs m (r' : Z) m' d f g v r
+        (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
+        (r'_correct : (2 ^ machine_wordsize * r') mod m = 1)
+        (m'_correct : (m * m') mod 2 ^ machine_wordsize = -1 mod 2 ^ machine_wordsize)
+        (m_big : 1 < m)
+        (m_small : m < (2 ^ machine_wordsize) ^ Z.of_nat mont_limbs)
+        (Hv2 : valid machine_wordsize mont_limbs m v)
+        (Hr2 : valid machine_wordsize mont_limbs m r)
+        (mw0 : 0 < machine_wordsize)
+        (sat_limbs0 : (0 < sat_limbs)%nat)
+        (mont_limbs0 : (0 < mont_limbs)%nat)
+        (Hv : length v = mont_limbs)
+        (Hr : length r = mont_limbs)
+        (Hf : length f = sat_limbs)
+        (Hg : length g = sat_limbs)
+        (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
+                      Z.twos_complement machine_wordsize d <
+                      2 ^ (machine_wordsize - 1) - 1)
+        (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize) :
+    let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
+    @WordByWordMontgomery.eval machine_wordsize mont_limbs
+                          (from_montgomerymod machine_wordsize mont_limbs m m' r1) mod m =
+    snd (divstep_spec2 m (Z.twos_complement machine_wordsize d)
+                       (eval_twos_complement machine_wordsize sat_limbs g)
+                       (@WordByWordMontgomery.eval machine_wordsize mont_limbs
+                                              (from_montgomerymod machine_wordsize mont_limbs m m' v))
+                       (@WordByWordMontgomery.eval machine_wordsize mont_limbs
+                                              (from_montgomerymod machine_wordsize mont_limbs m m' r))).
+  Proof.
+    assert (sat_limbs0' : (sat_limbs <> 0%nat)) by lia.
+    assert (mont_limbs0' : mont_limbs <> 0%nat) by lia.
+    unfold divstep_spec2.
+    pose proof (oppmod_correct machine_wordsize mont_limbs m r' m' r'_correct m'_correct mw0 m_big (ltac:(lia)) m_small) as H.
+    destruct H as [H1 H2].
+    assert (zero_valid : valid machine_wordsize mont_limbs m (sat_zero mont_limbs)) by (apply zero_valid; lia).
+    pose proof (nonzero_zero mont_limbs) as H3.
+    rewrite (nonzeromod_correct machine_wordsize mont_limbs m r' m') in H3
+      by (try apply zero_valid; lia).
+    cbn -[Z.mul oppmod sat_opp select].
+    rewrite select_push; rewrite ?length_sat_opp; auto.
+    rewrite sat_opp_mod2; auto.
+    rewrite twos_complement_pos'_spec.
+    rewrite twos_complement_pos_spec, <- !(eval_twos_complement_sat_mod2 machine_wordsize sat_limbs) by lia.
+    rewrite !Zmod_odd, !(select_eq (uweight machine_wordsize) _ mont_limbs), fodd;
+      try apply length_select; auto.
+    destruct (0 <? Z.twos_complement machine_wordsize d);
+      destruct (Z.odd (eval_twos_complement machine_wordsize sat_limbs g)); cbn -[Z.mul oppmod].
+    - rewrite (eval_addmod _ _ _ r'); auto.
+      rewrite <- Zplus_mod_idemp_l; auto.
+      rewrite (eval_oppmod _ _ _ r'); auto.
+      rewrite Zplus_mod_idemp_l; auto.
+      rewrite Z.add_comm; unfold Z.sub; auto.
+    - rewrite (eval_addmod _ _ _ r'); auto.
+      rewrite <- Zplus_mod_idemp_r; auto.
+      rewrite H3.
+      rewrite Z.mul_0_l, Z.add_0_r; auto.
+    - rewrite (eval_addmod _ _ _ r'); auto.
+      rewrite Z.mul_1_l; auto.
+    - rewrite (eval_addmod _ _ _ r'); auto.
+      rewrite <- Zplus_mod_idemp_r; auto.
+      rewrite H3.
+      rewrite Z.mul_0_l, Z.add_0_r; auto.
+    - apply length_sat_zero.
+    - unfold oppmod, WordByWordMontgomery.opp,
+      WordByWordMontgomery.sub, Rows.sub_then_maybe_add, Rows.add.
+      destruct (Rows.sub (uweight machine_wordsize) mont_limbs (zeros mont_limbs)) eqn:E.
+      destruct (Rows.flatten (uweight machine_wordsize) mont_limbs
+                             [l; zselect (2 ^ machine_wordsize - 1) (- z) (Partition.partition (uweight machine_wordsize) mont_limbs m)]) eqn:E2.
+      simpl.
+      inversion E; subst.
+      inversion E2.
+      apply Rows.length_sum_rows.
+      apply (uwprops machine_wordsize mw0).
+      apply Rows.length_sum_rows.
+      apply (uwprops machine_wordsize mw0).
+      apply length_zeros.
+      apply map_length.
+      rewrite length_zselect.
+      apply length_partition. Qed.
+
+  Lemma divstep_spec_divstep_spec_full_d m d f g v r :
+    fst (fst (divstep_spec d f g)) = fst (fst (fst (fst (divstep_spec_full m d f g v r)))).
+  Proof. unfold divstep_spec, divstep_spec_full.
+         destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+
+  Lemma divstep_spec_divstep_spec_full_f m d f g v r :
+    snd (fst (divstep_spec d f g)) = snd (fst (fst (fst (divstep_spec_full m d f g v r)))).
+  Proof. unfold divstep_spec, divstep_spec_full.
+         destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+
+  Lemma divstep_spec_divstep_spec_full_g m d f g v r :
+    snd (divstep_spec d f g) = snd (fst (fst (divstep_spec_full m d f g v r))).
+  Proof. unfold divstep_spec, divstep_spec_full.
+         destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+
+  Lemma divstep_spec2_divstep_spec_full_v m d f g v r :
+    fst (divstep_spec2 m d g v r) = snd (fst (divstep_spec_full m d f g v r)).
+  Proof. unfold divstep_spec2, divstep_spec_full.
+         destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+
+  Lemma divstep_spec2_divstep_spec_full_r m d f g v r :
+    snd (divstep_spec2 m d g v r) = snd (divstep_spec_full m d f g v r).
+  Proof. unfold divstep_spec2, divstep_spec_full.
+         destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+
+  Theorem divstep_correct_full machine_wordsize sat_limbs mont_limbs m r' m' d f g v r
+          (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
+          (r'_correct : (2 ^ machine_wordsize * r') mod m = 1)
+          (m'_correct : (m * m') mod 2 ^ machine_wordsize = -1 mod 2 ^ machine_wordsize)
+          (m_big : 1 < m)
+          (m_small : m < (2 ^ machine_wordsize) ^ Z.of_nat mont_limbs)
+          (mw1 : 1 < machine_wordsize)
+          (sat_limbs0 : (0 < sat_limbs)%nat)
+          (mont_limbs0 : (0 < mont_limbs)%nat)
+          (Hv : length v = mont_limbs)
+          (Hr : length r = mont_limbs)
+          (Hf : length f = sat_limbs)
+          (Hg : length g = sat_limbs)
+          (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
+                        Z.twos_complement machine_wordsize d <
+                        2 ^ (machine_wordsize - 1) - 1)
+          (overflow_f : - 2 ^ (machine_wordsize * sat_limbs - 2) <
+                        eval_twos_complement machine_wordsize sat_limbs f <
+                        2 ^ (machine_wordsize * sat_limbs - 2))
+          (overflow_g : - 2 ^ (machine_wordsize * sat_limbs - 2) <
+                        eval_twos_complement machine_wordsize sat_limbs g <
+                        2 ^ (machine_wordsize * sat_limbs - 2))
+          (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize)
+          (Hg2 : forall z, In z g -> 0 <= z < 2^machine_wordsize)
+          (Hv2 : valid machine_wordsize mont_limbs m v)
+          (Hr2 : valid machine_wordsize mont_limbs m r) :
+    let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
     (Z.twos_complement machine_wordsize d1,
      eval_twos_complement machine_wordsize sat_limbs f1,
      eval_twos_complement machine_wordsize sat_limbs g1,
@@ -1004,13 +1001,426 @@ Theorem divstep_correct_full machine_wordsize sat_limbs mont_limbs m r' m' d f g
                       (eval_twos_complement machine_wordsize sat_limbs g)
                       (@WordByWordMontgomery.eval machine_wordsize mont_limbs (from_montgomerymod machine_wordsize mont_limbs m m' v))
                       (@WordByWordMontgomery.eval machine_wordsize mont_limbs (from_montgomerymod machine_wordsize mont_limbs m m' r)).
-Proof.
-  assert (0 < machine_wordsize) by lia.
-  repeat apply injective_projections.
-  rewrite <- divstep_spec_divstep_spec_full_d, <- (divstep_d _ _ mont_limbs m _ _ _ v r); auto.
-  rewrite <- divstep_spec_divstep_spec_full_f, <- (divstep_f _ _ mont_limbs m _ _ _ v r); auto; lia.
-  rewrite <- divstep_spec_divstep_spec_full_g, <- (divstep_g _ _ mont_limbs m _ _ _ v r); auto; lia.
-  rewrite <- divstep_spec2_divstep_spec_full_v;
-    rewrite <- (divstep_v _ _ _ _ r' _ _ f _ _ _); auto.
-  rewrite <- divstep_spec2_divstep_spec_full_r;
-    rewrite <- (divstep_r _ _ _ _ r' _ _ f _ _ _); auto. Qed.
+  Proof.
+    assert (0 < machine_wordsize) by lia.
+    repeat apply injective_projections.
+    rewrite <- divstep_spec_divstep_spec_full_d, <- (divstep_d _ _ mont_limbs m _ _ _ v r); auto.
+    rewrite <- divstep_spec_divstep_spec_full_f, <- (divstep_f _ _ mont_limbs m _ _ _ v r); auto; lia.
+    rewrite <- divstep_spec_divstep_spec_full_g, <- (divstep_g _ _ mont_limbs m _ _ _ v r); auto; lia.
+    rewrite <- divstep_spec2_divstep_spec_full_v;
+      rewrite <- (divstep_v _ _ _ _ r' _ _ f _ _ _); auto.
+    rewrite <- divstep_spec2_divstep_spec_full_r;
+      rewrite <- (divstep_r _ _ _ _ r' _ _ f _ _ _); auto. Qed.
+
+End WordByWordMontgomery.
+
+Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.Freeze.
+Require Import Crypto.Arithmetic.ModOps.
+
+Module Export UnsaturatedSolinas.
+  Definition zeromod limbwidth_num limbwidth_den s c n := encodemod limbwidth_num limbwidth_den s c n 0.
+  Definition onemod limbwidth_num limbwidth_den s c n := encodemod limbwidth_num limbwidth_den s c n 1.
+  Definition primemod limbwidth_num limbwidth_den s c n := encodemod limbwidth_num limbwidth_den s c n (s - Associational.eval c).
+  Definition bytes_evalmod s := Positional.eval (weight 8 1) (bytes_n s).
+
+  Section __.
+
+  Context (limbwidth_num limbwidth_den : Z)
+          (limbwidth_good : 0 < limbwidth_den <= limbwidth_num)
+          (machine_wordsize : Z)
+          (s nn: Z)
+          (c : list (Z*Z))
+          (limbs : nat)
+          (sat_limbs : nat)
+          (len_c : nat)
+          (idxs : list nat)
+          (len_idxs : nat)
+          (m_nz:s - Associational.eval c <> 0) (s_nz:s <> 0)
+          (Hn_nz : limbs <> 0%nat)
+          (Hc : length c = len_c)
+          (Hidxs : length idxs = len_idxs).
+
+  Local Notation eval := (Positional.eval (weight limbwidth_num limbwidth_den) limbs).
+
+  Definition divstep_aux balance (data : Z * (list Z) * (list Z) * (list Z) * (list Z)) :=
+    let '(d,f,g,v,r) := data in
+    dlet cond := Z.land (twos_complement_pos' machine_wordsize d) (sat_mod2 g) in
+    dlet d' := Z.zselect cond d (twos_complement_opp' machine_wordsize d) in
+    dlet f' := select cond f g in
+    dlet g' := select cond g (sat_opp machine_wordsize sat_limbs f) in
+    dlet v' := select cond v r in
+    let v'':= addmod limbwidth_num limbwidth_den limbs v' v' in
+    dlet v''' := carrymod limbwidth_num limbwidth_den s c limbs idxs v'' in
+    dlet oppv := oppmod limbwidth_num limbwidth_den limbs balance v in
+    dlet r' := select cond r (carrymod limbwidth_num limbwidth_den s c limbs idxs oppv) in
+    dlet g0 := sat_mod2 g' in
+    let d'' := (fst (Z.add_get_carry_full (2^machine_wordsize) d' 1)) in
+    dlet f'' := select g0 (sat_zero sat_limbs) f' in
+    let g'' := sat_arithmetic_shiftr1 machine_wordsize sat_limbs (BYInv.sat_add machine_wordsize sat_limbs g' f'') in
+    dlet v'''' := select g0 (zeromod limbwidth_num limbwidth_den s c limbs) v' in
+    let r'' := addmod limbwidth_num limbwidth_den limbs r' v'''' in
+    dlet r''' := carrymod limbwidth_num limbwidth_den s c limbs idxs r'' in
+    (d'',f',g'',v''',r''').
+
+  Definition divstep balance d f g v r :=
+    divstep_aux balance (d, f, g, v, r).
+
+  (* TODO: generalize this so its not the same proof as for WbW *)
+  Lemma divstep_g balance d f g v r
+        (mw0 : 0 < machine_wordsize)
+        (sat_limbs0 : (0 < sat_limbs)%nat)
+        (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
+        (Hf : length f = sat_limbs)
+        (Hg : length g = sat_limbs)
+        (corner_case : Z.twos_complement machine_wordsize d <> - 2 ^ (machine_wordsize - 1))
+        (overflow_f : - 2 ^ (machine_wordsize * sat_limbs - 2) <
+                      eval_twos_complement machine_wordsize sat_limbs f <
+                      2 ^ (machine_wordsize * sat_limbs - 2))
+        (overflow_g : - 2 ^ (machine_wordsize * sat_limbs - 2) <
+                      eval_twos_complement machine_wordsize sat_limbs g <
+                      2 ^ (machine_wordsize * sat_limbs - 2))
+        (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize)
+        (Hg2 : forall z, In z g -> 0 <= z < 2^machine_wordsize) :
+    let '(d1,f1,g1,v1,r1) := (divstep balance d f g v r) in
+    eval_twos_complement machine_wordsize sat_limbs g1 =
+    snd (divstep_spec
+           (Z.twos_complement machine_wordsize d)
+           (eval_twos_complement machine_wordsize sat_limbs f)
+           (eval_twos_complement machine_wordsize sat_limbs g)).
+  Proof.
+    set (bw := machine_wordsize * Z.of_nat sat_limbs) in *.
+
+    simpl.
+    assert (0 < Z.of_nat sat_limbs) by lia.
+    assert (bw0 : 0 < bw) by nia.
+    assert (bw1 : 1 < bw) by (destruct (dec (bw = 1)); rewrite ?e in *; simpl in *; lia).
+    assert (2 ^ machine_wordsize = 2 * 2 ^ (machine_wordsize - 1))
+      by (rewrite Pow.Z.pow_mul_base, Z.sub_simpl_r; lia).
+    assert (0 < 2 ^ bw) by (apply Z.pow_pos_nonneg; lia).
+    assert (2 ^ (bw - 2) <= 2 ^ (bw - 1)) by (apply Z.pow_le_mono; lia).
+
+    Hint Rewrite length_sat_add length_sat_opp length_select : distr_length.
+
+    rewrite eval_twos_complement_sat_arithmetic_shiftr1; distr_length; autorewrite with distr_length; try nia.
+    rewrite eval_twos_complement_sat_add; auto; try (autorewrite with distr_length; lia).
+    rewrite !eval_twos_complement_select; auto; try (autorewrite with distr_length; lia).
+    rewrite eval_twos_complement_sat_opp; auto; try (autorewrite with distr_length; lia).
+    rewrite select_push; try (autorewrite with distr_length; lia).
+
+    rewrite sat_opp_mod2; auto.
+    unfold divstep_spec.
+    rewrite twos_complement_pos'_spec.
+    rewrite twos_complement_pos_spec; auto.
+    rewrite <- !(eval_twos_complement_sat_mod2 machine_wordsize sat_limbs); auto.
+    rewrite !Zmod_odd; auto.
+
+    set (g' := eval_twos_complement machine_wordsize sat_limbs g) in *.
+    set (f' := eval_twos_complement machine_wordsize sat_limbs f) in *.
+    assert (corner_case_f : f' <> - 2 ^ (bw - 1)) by
+        (replace (- _) with (- (2 * 2 ^ (bw - 2))); rewrite ?Pow.Z.pow_mul_base; ring_simplify (bw - 2 + 1); nia).
+
+    destruct (0 <? Z.twos_complement machine_wordsize d);
+      destruct (Z.odd g') eqn:g'_odd; rewrite ?fodd, ?eval_sat_zero; auto.
+    - simpl; rewrite Z.add_comm; reflexivity.
+    - simpl; rewrite eval_twos_complement_sat_zero; auto.
+    - rewrite Z.mul_1_l; simpl; reflexivity.
+    - simpl; rewrite eval_twos_complement_sat_zero; auto.
+    - replace (_ * _) with bw by reflexivity; lia.
+    - rewrite twos_complement_pos'_spec.
+      fold (eval_twos_complement machine_wordsize sat_limbs
+                                 (select (Z.twos_complement_pos machine_wordsize d &' sat_mod2 g) g (sat_opp machine_wordsize sat_limbs f))).
+      rewrite eval_twos_complement_select; try apply length_sat_opp; auto.
+      destruct (dec (_)); replace (machine_wordsize * _) with bw by reflexivity;
+        try rewrite eval_twos_complement_sat_opp; auto; replace (machine_wordsize * _) with bw by reflexivity; lia.
+    - rewrite twos_complement_pos'_spec.
+      fold (eval_twos_complement machine_wordsize sat_limbs
+                                 (select (sat_mod2 (select (Z.twos_complement_pos machine_wordsize d &' sat_mod2 g) g (sat_opp machine_wordsize sat_limbs f)))
+                                         (sat_zero sat_limbs) (select (Z.twos_complement_pos machine_wordsize d &' sat_mod2 g) f g))).
+      rewrite eval_twos_complement_select; try apply length_sat_zero; try apply length_select; auto.
+      destruct (dec (_)); try rewrite eval_twos_complement_sat_zero; try rewrite eval_twos_complement_select;
+        replace (machine_wordsize * _) with bw by reflexivity; try lia; destruct (dec (_)); lia.
+    - apply sat_add_bounds; repeat (rewrite ?length_sat_opp, ?(length_select sat_limbs), ?length_sat_zero; auto); lia. Qed.
+
+  Lemma divstep_d balance d f g v r
+        (mw1 : 1 < machine_wordsize)
+        (sat_limbs0 : (0 < sat_limbs)%nat)
+        (Hg : length g = sat_limbs)
+        (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
+                      Z.twos_complement machine_wordsize d <
+                      2 ^ (machine_wordsize - 1) - 1) :
+    let '(d1,f1,g1,v1,r1) := (divstep balance d f g v r) in
+    Z.twos_complement machine_wordsize d1 =
+    fst (fst (divstep_spec (Z.twos_complement machine_wordsize d)
+                           (eval_twos_complement machine_wordsize sat_limbs f)
+                           (eval_twos_complement machine_wordsize sat_limbs g))).
+  Proof.
+    assert (helper0 : 0 < Z.of_nat sat_limbs) by lia.
+    assert (mw0 : 0 < machine_wordsize) by lia.
+    assert (helper : 1 < 2 ^ machine_wordsize) by (apply Zpow_facts.Zpower_gt_1; lia).
+    assert (helper2 : 1 < 2 ^ (machine_wordsize - 1)) by (apply Zpow_facts.Zpower_gt_1; lia).
+    assert (helper3 : 2 ^ machine_wordsize = 2 * 2 ^ (machine_wordsize - 1))
+      by (rewrite Pow.Z.pow_mul_base, Z.sub_simpl_r; lia).
+
+    simpl; unfold divstep_spec.
+    rewrite AddGetCarry.Z.add_get_carry_full_mod.
+    rewrite twos_complement_pos'_spec.
+    rewrite twos_complement_opp'_spec.
+    rewrite twos_complement_pos_spec, <- (eval_twos_complement_sat_mod2 machine_wordsize sat_limbs), Zmod_odd by nia.
+    fold (eval_twos_complement machine_wordsize sat_limbs g); set (g' := eval_twos_complement machine_wordsize sat_limbs g) in *.
+    destruct ((0 <? Z.twos_complement machine_wordsize d) && (Z.odd g')) eqn:E.
+    - apply andb_prop in E. destruct E; rewrite H, H0. simpl Z.b2z; simpl Z.land; cbv [fst].
+      unfold Z.zselect. simpl (if _ =? _ then _ else _).
+      rewrite twos_complement_opp_correct, Z.twos_complement_mod, Z.twos_complement_add_full, Z.twos_complement_mod, twos_complement_zopp, Z.twos_complement_one; try lia.
+      rewrite Z.twos_complement_mod, twos_complement_zopp, Z.twos_complement_one; lia.
+    - apply andb_false_iff in E.
+      destruct E; rewrite H;
+        unfold Z.zselect; cbv [fst]; simpl (if _ =? _ then _ else _);
+          [destruct (Z.odd g') | rewrite Z.land_0_r; simpl (if _ =? _ then _ else _)];
+          rewrite Z.twos_complement_mod, Z.twos_complement_add_full, Z.twos_complement_one; rewrite ?Z.twos_complement_one; lia. Qed.
+
+  Lemma divstep_f balance d f g v r
+        (mw0 : 0 < machine_wordsize)
+        (Hf : length f = sat_limbs)
+        (Hg : length g = sat_limbs)
+        (corner_case : Z.twos_complement machine_wordsize d <> - 2 ^ (machine_wordsize - 1)) :
+    let '(d1,f1,g1,v1,r1) := (divstep balance d f g v r) in
+    eval_twos_complement machine_wordsize sat_limbs f1 =
+    snd (fst (divstep_spec (Z.twos_complement machine_wordsize d)
+                           (eval_twos_complement machine_wordsize sat_limbs f)
+                           (eval_twos_complement machine_wordsize sat_limbs g))).
+  Proof.
+    destruct sat_limbs. simpl. subst.
+    unfold eval_twos_complement.
+    rewrite !eval0; rewrite Z.mul_0_r.
+    replace (Z.twos_complement 0 0) with (-1). unfold divstep_spec.
+    destruct (0 <? Z.twos_complement machine_wordsize d); reflexivity. reflexivity.
+
+    unfold divstep_spec.
+    cbn -[Z.div Z.mul Z.sub Z.add].
+
+    set (n' := S n) in *.
+    assert (0 < n')%nat by apply Nat.lt_0_succ.
+    rewrite twos_complement_pos'_spec.
+
+    rewrite eval_twos_complement_select, twos_complement_pos_spec, <- (eval_twos_complement_sat_mod2 machine_wordsize n'), Zmod_odd; auto.
+    fold (eval_twos_complement machine_wordsize n' g).
+    destruct (0 <? Z.twos_complement machine_wordsize d); destruct (Z.odd (eval_twos_complement machine_wordsize n' g));
+      try reflexivity; lia. Qed.
+
+  Theorem divstep_correct balance d f g v r
+          (mw1 : 1 < machine_wordsize)
+          (sat_limbs0 : (0 < sat_limbs)%nat)
+          (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
+          (Hf : length f = sat_limbs)
+          (Hg : length g = sat_limbs)
+          (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
+                        Z.twos_complement machine_wordsize d <
+                        2 ^ (machine_wordsize - 1) - 1)
+          (overflow_f : - 2 ^ (machine_wordsize * sat_limbs - 2) <
+                        eval_twos_complement machine_wordsize sat_limbs f <
+                        2 ^ (machine_wordsize * sat_limbs - 2))
+          (overflow_g : - 2 ^ (machine_wordsize * sat_limbs - 2) <
+                        eval_twos_complement machine_wordsize sat_limbs g <
+                        2 ^ (machine_wordsize * sat_limbs - 2))
+          (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize)
+          (Hg2 : forall z, In z g -> 0 <= z < 2^machine_wordsize) :
+    let '(d1,f1,g1,v1,r1) := (divstep balance d f g v r) in
+    (Z.twos_complement machine_wordsize d1,
+     eval_twos_complement machine_wordsize sat_limbs f1,
+     eval_twos_complement machine_wordsize sat_limbs g1) =
+    divstep_spec (Z.twos_complement machine_wordsize d)
+                 (eval_twos_complement machine_wordsize sat_limbs f)
+                 (eval_twos_complement machine_wordsize sat_limbs g).
+  Proof.
+    assert (0 < machine_wordsize) by lia. simpl.
+    apply injective_projections.
+    apply injective_projections.
+    rewrite <- (divstep_d balance _ _ _ v r); auto.
+    rewrite <- (divstep_f balance _ _ _ v r); auto; lia.
+    rewrite <- (divstep_g balance _ _ _ v r); auto; lia. Qed.
+
+  Lemma divstep_v balance d f g v r
+        (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
+
+        (mw0 : 0 < machine_wordsize)
+        (sat_limbs0 : (0 < sat_limbs)%nat)
+        (mont_limbs0 : (0 < limbs)%nat)
+        (Hv : length v = limbs)
+        (Hr : length r = limbs)
+        (Hg : length g = sat_limbs)
+        (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
+                      Z.twos_complement machine_wordsize d <
+                      2 ^ (machine_wordsize - 1) - 1) :
+    let '(d1,f1,g1,v1,r1) := (divstep balance d f g v r) in
+                          (eval v1) mod (s - Associational.eval c) =
+                          fst (divstep_spec2 (s - Associational.eval c)
+                               (Z.twos_complement machine_wordsize d)
+                               (eval_twos_complement machine_wordsize sat_limbs g)
+                               (eval v)
+                               (eval r)).
+  Proof.
+    assert (sat_limbs <> 0%nat) by lia.
+    assert (limbs <> 0%nat) by lia.
+    simpl.
+    rewrite twos_complement_pos'_spec.
+
+    rewrite twos_complement_pos_spec, <- (eval_twos_complement_sat_mod2 machine_wordsize sat_limbs) by lia.
+    rewrite Zmod_odd, (select_eq (uweight machine_wordsize) _ limbs); auto. Admitted.
+    (* unfold divstep_spec2. *)
+    (* destruct (0 <? Z.twos_complement machine_wordsize d); *)
+    (*   destruct (Z.odd (eval_twos_complement machine_wordsize sat_limbs g));  *)
+    (*   rewrite ?(eval_addmod), ?Z.add_diag; auto; apply limbwidth_good. Qed. *)
+
+  Lemma divstep_r balance d f g v r
+        (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
+        (mw0 : 0 < machine_wordsize)
+        (sat_limbs0 : (0 < sat_limbs)%nat)
+        (mont_limbs0 : (0 < limbs)%nat)
+        (length_balance : length balance = limbs)
+        (eval_balance : eval balance mod (s - Associational.eval c) = 0)
+        (Hv : length v = limbs)
+        (Hr : length r = limbs)
+        (Hf : length f = sat_limbs)
+        (Hg : length g = sat_limbs)
+        (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
+                      Z.twos_complement machine_wordsize d <
+                      2 ^ (machine_wordsize - 1) - 1)
+        (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize) :
+    let '(d1,f1,g1,v1,r1) := (divstep balance d f g v r) in
+                          (eval r1) mod (s - Associational.eval c) =
+    snd (divstep_spec2 (s - Associational.eval c) (Z.twos_complement machine_wordsize d)
+                       (eval_twos_complement machine_wordsize sat_limbs g)
+                                              (eval v)
+                                              (eval r)).
+  Proof.
+    assert (sat_limbs0' : (sat_limbs <> 0%nat)) by lia.
+    assert (mont_limbs0' : limbs <> 0%nat) by lia.
+    unfold divstep_spec2.
+    (* pose proof (eval_oppmod limbwidth_num limbwidth_den limbwidth_good s c limbs m_nz s_nz balance). *)
+    (* destruct H as [H1 H2]. *)
+    cbn -[Z.mul oppmod sat_opp select].
+    rewrite select_push; rewrite ?length_sat_opp; auto.
+    rewrite sat_opp_mod2; auto.
+    rewrite twos_complement_pos'_spec.
+    rewrite twos_complement_pos_spec, <- !(eval_twos_complement_sat_mod2 machine_wordsize sat_limbs) by lia.
+    rewrite !Zmod_odd, !(select_eq (uweight machine_wordsize) _ limbs), fodd;
+      try apply length_select; auto.
+    destruct (0 <? Z.twos_complement machine_wordsize d);
+      destruct (Z.odd (eval_twos_complement machine_wordsize sat_limbs g)); cbn -[Z.mul oppmod].
+    - rewrite eval_carrymod, eval_addmod; auto.
+      rewrite <- Zplus_mod_idemp_l; auto.
+      rewrite eval_carrymod, eval_oppmod; auto.
+      rewrite Zplus_mod_idemp_l; auto.
+      rewrite Z.add_comm; unfold Z.sub; auto.
+      unfold oppmod. apply length_opp. assumption. assumption.
+      unfold carrymod.
+      rewrite length_chained_carries. reflexivity.
+      unfold oppmod. apply length_opp. assumption. assumption.
+      Admitted.
+    (* - rewrite (eval_addmod); auto. *)
+    (*   rewrite <- Zplus_mod_idemp_r; auto. *)
+    (*   unfold zeromod. *)
+    (*   unfold encodemod. *)
+    (*   rewrite eval_encode. *)
+    (*   rewrite Z.mul_0_l, ?Z.add_0_r; auto. *)
+    (*   unfold weight. rewrite Z.mul_0_r. reflexivity. *)
+    (*   intros. unfold weight. apply Z.pow_nonzero. lia.  Admitted. *)
+    (* - rewrite (eval_addmod _ _ _ r'); auto. *)
+    (*   rewrite Z.mul_1_l; auto. *)
+    (* - rewrite (eval_addmod _ _ _ r'); auto. *)
+    (*   rewrite <- Zplus_mod_idemp_r; auto. *)
+    (*   rewrite H3. *)
+    (*   rewrite Z.mul_0_l, Z.add_0_r; auto. *)
+    (* - apply length_sat_zero. *)
+    (* - unfold oppmod, WordByWordMontgomery.opp, *)
+    (*   WordByWordMontgomery.sub, Rows.sub_then_maybe_add, Rows.add. *)
+    (*   destruct (Rows.sub (uweight machine_wordsize) mont_limbs (zeros mont_limbs)) eqn:E. *)
+    (*   destruct (Rows.flatten (uweight machine_wordsize) mont_limbs *)
+    (*                          [l; zselect (2 ^ machine_wordsize - 1) (- z) (Partition.partition (uweight machine_wordsize) mont_limbs m)]) eqn:E2. *)
+    (*   simpl. *)
+    (*   inversion E; subst. *)
+    (*   inversion E2. *)
+    (*   apply Rows.length_sum_rows. *)
+    (*   apply (uwprops machine_wordsize mw0). *)
+    (*   apply Rows.length_sum_rows. *)
+    (*   apply (uwprops machine_wordsize mw0). *)
+    (*   apply length_zeros. *)
+    (*   apply map_length. *)
+    (*   rewrite length_zselect. *)
+    (*   apply length_partition. Qed. *)
+
+  Lemma divstep_spec_divstep_spec_full_d m d f g v r :
+    fst (fst (divstep_spec d f g)) = fst (fst (fst (fst (divstep_spec_full m d f g v r)))).
+  Proof. unfold divstep_spec, divstep_spec_full.
+         destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+
+  Lemma divstep_spec_divstep_spec_full_f m d f g v r :
+    snd (fst (divstep_spec d f g)) = snd (fst (fst (fst (divstep_spec_full m d f g v r)))).
+  Proof. unfold divstep_spec, divstep_spec_full.
+         destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+
+  Lemma divstep_spec_divstep_spec_full_g m d f g v r :
+    snd (divstep_spec d f g) = snd (fst (fst (divstep_spec_full m d f g v r))).
+  Proof. unfold divstep_spec, divstep_spec_full.
+         destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+
+  Lemma divstep_spec2_divstep_spec_full_v m d f g v r :
+    fst (divstep_spec2 m d g v r) = snd (fst (divstep_spec_full m d f g v r)).
+  Proof. unfold divstep_spec2, divstep_spec_full.
+         destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+
+  Lemma divstep_spec2_divstep_spec_full_r m d f g v r :
+    snd (divstep_spec2 m d g v r) = snd (divstep_spec_full m d f g v r).
+  Proof. unfold divstep_spec2, divstep_spec_full.
+         destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
+
+  (* TODO: state and prove this *)
+
+  (* Theorem divstep_correct_full machine_wordsize sat_limbs mont_limbs m r' m' d f g v r *)
+  (*         (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true) *)
+  (*         (r'_correct : (2 ^ machine_wordsize * r') mod m = 1) *)
+  (*         (m'_correct : (m * m') mod 2 ^ machine_wordsize = -1 mod 2 ^ machine_wordsize) *)
+  (*         (m_big : 1 < m) *)
+  (*         (m_small : m < (2 ^ machine_wordsize) ^ Z.of_nat mont_limbs) *)
+  (*         (mw1 : 1 < machine_wordsize) *)
+  (*         (sat_limbs0 : (0 < sat_limbs)%nat) *)
+  (*         (mont_limbs0 : (0 < mont_limbs)%nat) *)
+  (*         (Hv : length v = mont_limbs) *)
+  (*         (Hr : length r = mont_limbs) *)
+  (*         (Hf : length f = sat_limbs) *)
+  (*         (Hg : length g = sat_limbs) *)
+  (*         (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 < *)
+  (*                       Z.twos_complement machine_wordsize d < *)
+  (*                       2 ^ (machine_wordsize - 1) - 1) *)
+  (*         (overflow_f : - 2 ^ (machine_wordsize * sat_limbs - 2) < *)
+  (*                       eval_twos_complement machine_wordsize sat_limbs f < *)
+  (*                       2 ^ (machine_wordsize * sat_limbs - 2)) *)
+  (*         (overflow_g : - 2 ^ (machine_wordsize * sat_limbs - 2) < *)
+  (*                       eval_twos_complement machine_wordsize sat_limbs g < *)
+  (*                       2 ^ (machine_wordsize * sat_limbs - 2)) *)
+  (*         (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize) *)
+  (*         (Hg2 : forall z, In z g -> 0 <= z < 2^machine_wordsize) *)
+  (*   let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in *)
+  (*   (Z.twos_complement machine_wordsize d1, *)
+  (*    eval_twos_complement machine_wordsize sat_limbs f1, *)
+  (*    eval_twos_complement machine_wordsize sat_limbs g1, *)
+  (*    @WordByWordMontgomery.eval machine_wordsize mont_limbs (from_montgomerymod machine_wordsize mont_limbs m m' v1) mod m, *)
+  (*    @WordByWordMontgomery.eval machine_wordsize mont_limbs (from_montgomerymod machine_wordsize mont_limbs m m' r1) mod m) = *)
+  (*   divstep_spec_full m (Z.twos_complement machine_wordsize d) *)
+  (*                     (eval_twos_complement machine_wordsize sat_limbs f) *)
+  (*                     (eval_twos_complement machine_wordsize sat_limbs g) *)
+  (*                     (@WordByWordMontgomery.eval machine_wordsize mont_limbs (from_montgomerymod machine_wordsize mont_limbs m m' v)) *)
+  (*                     (@WordByWordMontgomery.eval machine_wordsize mont_limbs (from_montgomerymod machine_wordsize mont_limbs m m' r)). *)
+  (* Proof. *)
+  (*   assert (0 < machine_wordsize) by lia. *)
+  (*   repeat apply injective_projections. *)
+  (*   rewrite <- divstep_spec_divstep_spec_full_d, <- (divstep_d _ _ mont_limbs m _ _ _ v r); auto. *)
+  (*   rewrite <- divstep_spec_divstep_spec_full_f, <- (divstep_f _ _ mont_limbs m _ _ _ v r); auto; lia. *)
+  (*   rewrite <- divstep_spec_divstep_spec_full_g, <- (divstep_g _ _ mont_limbs m _ _ _ v r); auto; lia. *)
+  (*   rewrite <- divstep_spec2_divstep_spec_full_v; *)
+  (*     rewrite <- (divstep_v _ _ _ _ r' _ _ f _ _ _); auto. *)
+  (*   rewrite <- divstep_spec2_divstep_spec_full_r; *)
+  (*     rewrite <- (divstep_r _ _ _ _ r' _ _ f _ _ _); auto. Qed.   *)
+  End __.
+End UnsaturatedSolinas.

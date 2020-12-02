@@ -103,7 +103,7 @@ Module Z.
   Lemma twos_complement_mod2 m a (Hm : 0 < m) : Z.twos_complement m a mod 2 = a mod 2.
   Proof. rewrite Zmod_odd, twos_complement_odd, <- Zmod_odd by lia. reflexivity. Qed.
 
-  Lemma twos_complement_bounds a m (Hm : 0 < m) :
+  Lemma twos_complement_bounds m a (Hm : 0 < m) :
     - 2 ^ (m - 1) <= Z.twos_complement m a < 2 ^ (m - 1).
   Proof.
     unfold Z.twos_complement.
@@ -113,7 +113,7 @@ Module Z.
 
   Hint Resolve twos_complement_bounds : zarith.
 
-  Lemma twos_complement_add_full a b m
+  Lemma twos_complement_add_full m a b
       (Hm : 0 < m)
       (Hsum : - 2 ^ (m - 1) <= Z.twos_complement m a + Z.twos_complement m b < 2 ^ (m - 1)) :
     Z.twos_complement m (a + b) = Z.twos_complement m a + Z.twos_complement m b.
@@ -122,7 +122,7 @@ Module Z.
     destruct_ltb (a mod 2 ^ m) (2 ^ (m - 1));
       destruct_ltb (b mod 2 ^ m) (2 ^ (m - 1)); repeat (push_Zmod; pull_Zmod; rewrite ?Z.sub_0_r); reflexivity. Qed.
 
-  Lemma twos_complement_add_weak a b m
+  Lemma twos_complement_add_weak m a b
         (Hm : 0 < m)
         (Ha : - 2 ^ (m - 2) <= Z.twos_complement m a < 2 ^ (m - 2))
         (Hb : - 2 ^ (m - 2) <= Z.twos_complement m b < 2 ^ (m - 2)) :
