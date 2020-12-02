@@ -7,7 +7,7 @@ Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.BaseConversion.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
-Require Import Crypto.Arithmetic.BYInv.
+Require Import Crypto.Arithmetic.BYInv.Definitions.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
@@ -250,8 +250,10 @@ Module Solinas.
             (saturated_bounds : list (option zrange))
             (length_saturated_bounds : length saturated_bounds = n)
             (m_pos : 0 < m).
+
     Local Notation eval := (Positional.eval wt n).
     Local Notation bytes_eval := (Positional.eval (weight 8 1) n_bytes).
+    Local Notation twos_complement_eval f := (tc_eval bitwidth n f).
 
     Let prime_bytes_upperbound_list : list Z
       := Partition.partition (weight 8 1) n_bytes (s-1).
@@ -261,6 +263,8 @@ Module Solinas.
       := r[0~>(2^bitwidth - 1)]%zrange.
     Let prime_bound : zrange
       := r[0~>(m - 1)]%zrange.
+    Let word_bound : zrange
+      := r[0~>2^bitwidth - 1]%zrange.
 
     Definition from_bytes_correct
                (from_bytes : list Z -> list Z)
@@ -381,6 +385,75 @@ Module Solinas.
         is_bounded_by0 word_bound x = true
         -> eval (encode_word x) mod m = x mod m
            /\ list_Z_bounded_by tight_bounds (encode_word x).
+
+    (* Bernstein-Yang inversion *)
+    Definition msat_correct
+               (msat : list Z)
+      := twos_complement_eval msat = m
+         /\ list_Z_bounded_by saturated_bounds msat.
+
+    Definition divstep_precomp_correct
+               (divstep_precomp : list Z)
+      := let mbits := (Z.log2 m) + 1  in
+         eval (divstep_precomp) = ((m - 1) / 2) ^ (if Decidable.dec (mbits < 46)
+                                                   then (49 * mbits + 80) / 17
+                                                   else (49 * mbits + 57)/ 17)
+         /\ list_Z_bounded_by tight_bounds (divstep_precomp).
+
+    Definition divstep_correct
+               (divstep :
+                  Z -> list Z -> list Z -> list Z -> list Z ->
+                  Z * list Z * list Z * list Z * list Z) : Prop
+      := forall (d : Z) f g v r,
+        let '(d1,f1,g1,v1,r1) := divstep d f g v r in
+        ((d1,
+           twos_complement_eval f1,
+           twos_complement_eval g1,
+           eval v1 mod m,
+           eval r1 mod m) =
+          (if (0 <? d) && Z.odd (twos_complement_eval g)
+           then (1 - d,
+                 (twos_complement_eval g),
+                 ((twos_complement_eval g) - (twos_complement_eval f)) / 2,
+                 (2 * (eval r)) mod m,
+                 ((eval v) - (eval v)) mod m)
+           else (1 + d,
+                 (twos_complement_eval f),
+                 ((twos_complement_eval g) + (twos_complement_eval g mod 2) * (twos_complement_eval f)) / 2,
+                 (2 * (eval v)) mod m,
+                 ((eval r) + (twos_complement_eval g mod 2) * (eval v)) mod m))
+         (* /\ is_bounded_by0 word_bound d1 = true *)
+         (* /\ list_Z_bounded_by saturated_bounds f1 *)
+         (* /\ list_Z_bounded_by saturated_bounds g1 *)
+         (* /\ list_Z_bounded_by tight_bounds v1 *)
+        (* /\ list_Z_bounded_by tight_bounds r1 *)).
+
+    (* the following are dummies. they should refer to the correctness theorem of by_inv_jump *)
+    Definition inner_loop_correct
+               (inner_loop : list Z -> list Z -> Z * Z * Z * Z * Z) : Prop
+      := forall f g, eval f = eval g.
+
+    Definition inner_loop_hd_correct
+               (inner_loop : list Z -> list Z -> Z * Z * Z * Z * Z) : Prop
+      := forall f g, eval f = eval g.
+
+    Definition update_fg_correct
+               (update_fg : list Z -> list Z -> Z -> Z -> Z -> Z -> list Z * list Z)
+      := forall f g (u v q r : Z), eval f = eval g.
+
+    Definition update_vr_correct
+               (update_fg : list Z -> list Z -> Z -> Z -> Z -> Z -> list Z * list Z)
+      := forall f g (u v q r : Z), eval f = eval g.
+
+    Definition jump_divstep_correct
+               (jump_divstep : list Z -> list Z -> list Z -> list Z) : Prop
+      :=
+        forall f g (r v : list Z), eval f = eval g. (* dummy. this should be the that its iteration yields the inverse *)
+
+    Definition jump_divstep_hd_correct
+               (jump_divstep : list Z -> list Z -> list Z -> list Z) : Prop
+      :=
+        forall f g (r v : list Z), eval f = eval g. (* dummy. this should be the that its iteration yields the inverse *)
 
     Section ring.
       Context carry_mul (Hcarry_mul : carry_mul_correct carry_mul)
@@ -515,7 +588,7 @@ Module WordByWordMontgomery.
             (length_saturated_bounds : length saturated_bounds = n).
     Local Notation eval := (@WordByWordMontgomery.eval bitwidth n).
     Local Notation bytes_eval := (Positional.eval (weight 8 1) n_bytes).
-    Local Notation twos_complement_eval f := (eval_twos_complement bitwidth n f).
+    Local Notation twos_complement_eval f := (tc_eval bitwidth n f).
 
     Let prime_bound : zrange
       := r[0~>(m - 1)]%zrange.
@@ -659,7 +732,7 @@ Module WordByWordMontgomery.
                  ((twos_complement_eval g) + (twos_complement_eval g mod 2) * (twos_complement_eval f)) / 2,
                  (2 * (eval (from_montgomery v))) mod m,
                  ((eval (from_montgomery r)) + (twos_complement_eval g mod 2) * (eval (from_montgomery v))) mod m)))
-         /\ valid r1 /\ valid r1 /\ valid f1 /\ valid g1).
+         /\ valid r1 /\ valid v1 /\ valid f1 /\ valid g1).
 
     Section ring.
       Context mul     (Hmul     :     mul_correct mul)

@@ -21,6 +21,7 @@ Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.ZUtil.ModExp.
 Require Import Rewriter.Language.Wf.
 Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
@@ -30,6 +31,7 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.Freeze.
+Require Import Crypto.Arithmetic.BYInv.Definitions.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
@@ -37,6 +39,7 @@ Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinasReificationCache.
 Require Import Crypto.Assembly.Equivalence.
+Require Import Crypto.PushButtonSynthesis.BYInversionReificationCache.
 Import Option.Notations.
 Import ListNotations.
 Local Open Scope string_scope. Local Open Scope bool_scope. Local Open Scope Z_scope. Local Open Scope list_scope.
@@ -51,6 +54,8 @@ Import Compilers.API.
 
 Import COperationSpecifications.Primitives.
 Import COperationSpecifications.Solinas.
+Import BYInversionReificationCache.UnsaturatedSolinas.
+Import Definitions.UnsaturatedSolinas.
 
 Import Associational Positional.
 
@@ -111,6 +116,7 @@ Section __.
           (c : list (Z * Z))
           (machine_wordsize : machine_wordsize_opt).
 
+
   Local Notation limbwidth := (limbwidth n s c).
   Definition idxs : list nat := carry_chains n s c.
   Definition n_bytes := bytes_n s.
@@ -163,6 +169,18 @@ Section __.
     let M := encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c m in
     distribute_balance n s c m_enc_min M.
 
+  Definition m_bits := Z.log2 m + 1.
+  Definition sat_limbs := Z.to_nat (((m_bits - 1) / machine_wordsize) + 2). (* the two extra bits are for sign and to store the first addition in divstep which might be twice as big as m *)
+  (* Definition sat_limbs := Z.to_nat ((m_bits - 1 + 2) / machine_wordsize). (* the two extra bits are for sign and to store the first addition in divstep which might be twice as big as m *) *)
+  Definition sat_upper_bound := 2 ^ (sat_limbs * machine_wordsize) - 1.
+  Definition word_sat_mul_limbs := (sat_limbs + 1)%nat. (* to store the result of a multiplication of signed multilimb with a word *)
+
+  Local Notation larger_saturated_bounds := (Primitives.saturated_bounds sat_limbs machine_wordsize).
+  Definition saturated_bytes_list : list Z
+    := Partition.partition (weight 8 1) n_bytes sat_upper_bound.
+  Definition saturated_bytes_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
+    := Some (List.map (fun v => Some r[0 ~> v]%zrange) saturated_bytes_list).
+
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
   Definition possible_values_of_machine_wordsize
@@ -172,7 +190,79 @@ Section __.
     := prefix_with_carry_bytes [machine_wordsize; 2 * machine_wordsize]%Z.
 
   Let possible_values := possible_values_of_machine_wordsize.
+  Let possible_values_no_bit := [0; machine_wordsize; 2 * machine_wordsize].
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
+  Definition bounds : list (ZRange.type.option.interp base.type.Z)
+    := saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+  Definition larger_bounds : list (ZRange.type.option.interp base.type.Z)
+    := larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+
+  Local Notation divstep_precompmod := (divstep_precompmod s c).
+  Local Notation jumpdivstep_precompmod := (jumpdivstep_precompmod machine_wordsize s c).
+  Local Notation jumpdivstep_precompmod_hd := (jumpdivstep_precompmod_hd machine_wordsize s c).
+
+  Definition divstep_input :=
+    (Some r[0~>2^machine_wordsize-1],
+     (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+      (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+       (Some tight_bounds,
+        (Some tight_bounds,tt)))))%zrange.
+
+  Definition divstep_output :=
+    (Some r[0~>2^machine_wordsize-1],
+     Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+     Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+     Some tight_bounds,
+     Some tight_bounds)%zrange.
+
+  (* these are for jumpdivstep, if it could be reified (currently too slow) *)
+  (* Definition jump_divstep_input := *)
+  (*   (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs), *)
+  (*    (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs), *)
+  (*     (Some tight_bounds, *)
+  (*      (Some tight_bounds,tt))))%zrange. *)
+
+  (* Definition jump_divstep_output := *)
+  (*   (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs), *)
+  (*    Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs), *)
+  (*    Some tight_bounds, *)
+  (*    Some tight_bounds)%zrange. *)
+
+  Definition inner_loop_input :=
+    (Some r[0~>2^machine_wordsize-1],
+      (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+        (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs), tt)))%zrange.
+
+  Definition inner_loop_output :=
+    (Some r[0 ~> 2^machine_wordsize-1],
+     Some r[0 ~> 2^machine_wordsize-1],
+     Some r[0 ~> 2^machine_wordsize-1],
+     Some r[0 ~> 2^machine_wordsize-1],
+     Some r[0 ~> 2^machine_wordsize-1])%zrange.
+
+  Definition update_fg_input :=
+    (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+      (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+        (Some r[0 ~> 2^machine_wordsize-1],
+          (Some r[0 ~> 2^machine_wordsize-1],
+            (Some r[0 ~> 2^machine_wordsize-1],
+              (Some r[0 ~> 2^machine_wordsize-1], tt))))))%zrange.
+
+  Definition update_fg_output :=
+    (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+     Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs))%zrange.
+
+  Definition update_vr_input :=
+    (Some tight_bounds,
+      (Some tight_bounds,
+        (Some r[0 ~> 2^machine_wordsize-1],
+          (Some r[0 ~> 2^machine_wordsize-1],
+            (Some r[0 ~> 2^machine_wordsize-1],
+              (Some r[0 ~> 2^machine_wordsize-1], tt))))))%zrange.
+
+  Definition update_vr_output :=
+    (Some tight_bounds,
+     Some tight_bounds)%zrange.
 
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
@@ -301,7 +391,11 @@ Section __.
   Qed.
 
   Local Notation weightf := (weight (Qnum limbwidth) (QDen limbwidth)).
+  Local Notation weightu := (weight machine_wordsize 1).
   Local Notation evalf := (eval weightf n).
+  Local Notation evalu := (eval weightu sat_limbs).
+  Local Notation evalulong := (eval weightu word_sat_mul_limbs).
+
   Local Notation notations_for_docstring
     := (CorrectnessStringification.dyn_context.cons
           m "m"
@@ -309,7 +403,17 @@ Section __.
              weightf "weight"
              (CorrectnessStringification.dyn_context.cons
                 evalf "eval"
-                CorrectnessStringification.dyn_context.nil)))%string.
+                (CorrectnessStringification.dyn_context.cons
+                   (@tc_eval machine_wordsize n) "twos_complement_eval"
+                   (CorrectnessStringification.dyn_context.cons
+                      (Z.log2 m) "(log2 m)"
+                      (CorrectnessStringification.dyn_context.cons
+                         weightu "weight"
+                         (CorrectnessStringification.dyn_context.cons
+                            evalu "eval"
+                            (CorrectnessStringification.dyn_context.cons
+                               evalulong "eval"
+                               CorrectnessStringification.dyn_context.nil))))))))%string.
   Local Notation "'docstring_with_summary_from_lemma!' summary correctness"
     := (docstring_with_summary_from_lemma_with_ctx!
           notations_for_docstring
@@ -677,6 +781,290 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Primitives.scopy n machine_wordsize prefix.
 
+  Definition msat
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_partition_gen
+            @ GallinaReify.Reify (machine_wordsize:Z)
+            @ GallinaReify.Reify sat_limbs
+            @ GallinaReify.Reify m)
+         tt
+         (Some larger_bounds).
+
+  Definition smsat (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "msat" msat
+          (docstring_with_summary_from_lemma!
+             (fun fname => ["The function " ++ fname ++ " returns the saturated (signed) representation of the prime modulus."]%string)
+             (msat_correct machine_wordsize n m saturated_bounds)).
+
+  Definition divstep_precomp
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values_no_bit
+         (reified_encode_gen
+            @ GallinaReify.Reify (Qnum limbwidth)
+            @ GallinaReify.Reify (Z.pos (Qden limbwidth))
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify divstep_precompmod)
+         tt
+         (Some tight_bounds).
+
+  Definition sdivstep_precomp (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "divstep_precomp" divstep_precomp
+          (docstring_with_summary_from_lemma!
+             (fun fname => ["The function " ++ fname ++ " returns the precomputed value for Bernstein-Yang-inversion (in montgomery form)."]%string)
+             (divstep_precomp_correct weightf n m tight_bounds)).
+
+  Definition divstep
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_divstep_gen
+            @ GallinaReify.Reify (Qnum limbwidth)
+            @ GallinaReify.Reify (Z.pos (Qden limbwidth))
+            @ GallinaReify.Reify (machine_wordsize:Z)
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify sat_limbs
+            @ GallinaReify.Reify idxs
+            @ GallinaReify.Reify balance)
+         divstep_input
+         divstep_output.
+
+  Definition sdivstep (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "divstep" divstep
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => ["The function " ++ fname ++ " computes a divstep."]%string)
+             (divstep_correct machine_wordsize weightf n m (* tight_bounds saturated_bounds_list *))).
+
+  Definition sat_from_bytes
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values_with_bytes
+         (reified_from_bytes_gen
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify 1 @ GallinaReify.Reify sat_upper_bound @ GallinaReify.Reify sat_limbs)
+         (saturated_bytes_bounds, tt)
+         (Some larger_bounds).
+
+  Definition ssat_from_bytes (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "sat_from_bytes" sat_from_bytes
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => ["The function " ++ fname ++ " deserializes a field element NOT in the Montgomery domain from bytes in little-endian order."]%string)
+             (from_bytes_correct weightu sat_limbs n_bytes m s saturated_bounds)).
+             (* (forall v, valid v)). *)
+             (* (from_bytes_correct machine_wordsize n n_bytes m valid bytes_valid)). *)
+
+  Definition jumpdivstep_precomp
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values_no_bit
+         (reified_encode_gen
+            @ GallinaReify.Reify (Qnum limbwidth)
+            @ GallinaReify.Reify (Z.pos (Qden limbwidth))
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify jumpdivstep_precompmod)
+         tt
+         (Some tight_bounds).
+
+  Definition sjumpdivstep_precomp (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "jumpdivstep_precomp" jumpdivstep_precomp
+          (docstring_with_summary_from_lemma!
+             (fun fname => ["The function " ++ fname ++ " returns the precomputed value for the jump-version of Bernstein-Yang-inversion (in montgomery form)."]%string)
+             (divstep_precomp_correct weightf n m tight_bounds)).
+
+  Definition jumpdivstep_precomp_hd
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values_no_bit
+         (reified_encode_gen
+            @ GallinaReify.Reify (Qnum limbwidth)
+            @ GallinaReify.Reify (Z.pos (Qden limbwidth))
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify jumpdivstep_precompmod_hd)
+         tt
+         (Some tight_bounds).
+
+  Definition sjumpdivstep_precomp_hd (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "jumpdivstep_precomp_hd" jumpdivstep_precomp_hd
+          (docstring_with_summary_from_lemma!
+             (fun fname => ["The function " ++ fname ++ " returns the precomputed value for the (half-delta) jump-version of Bernstein-Yang-inversion (in montgomery form)."]%string)
+             (divstep_precomp_correct weightf n m tight_bounds)).
+
+  Definition inner_loop
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_inner_loop_gen
+            @ GallinaReify.Reify (machine_wordsize:Z))
+         (inner_loop_input)
+         (inner_loop_output).
+
+  Definition sinner_loop (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "inner_loop" inner_loop
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " computes a inner_loop."]%string)
+             (inner_loop_correct weightu sat_limbs)).
+
+  Definition inner_loop_hd
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_inner_loop_hd_gen
+            @ GallinaReify.Reify (machine_wordsize:Z))
+         (inner_loop_input)
+         (inner_loop_output).
+
+  Definition sinner_loop_hd (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "inner_loop_hd" inner_loop_hd
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " computes a inner_loop_hd."]%string)
+             (inner_loop_hd_correct weightu sat_limbs)).
+
+  Definition update_fg
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_update_fg_gen
+            @ GallinaReify.Reify (machine_wordsize:Z)
+            @ GallinaReify.Reify sat_limbs
+            @ GallinaReify.Reify word_sat_mul_limbs)
+         (update_fg_input)
+         (update_fg_output).
+
+  Definition supdate_fg (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "update_fg" update_fg
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " computes a update_fg."]%string)
+             (update_fg_correct weightu sat_limbs)).
+
+  Definition update_vr
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_update_vr_gen
+            @ GallinaReify.Reify (Qnum limbwidth:Z)
+            @ GallinaReify.Reify (Z.pos (Qden limbwidth))
+            @ GallinaReify.Reify (machine_wordsize:Z)
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify idxs
+            @ GallinaReify.Reify balance)
+         (update_vr_input)
+         (update_vr_output).
+
+  Definition supdate_vr (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "update_vr" update_vr
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " computes a update_vr."]%string)
+             (update_vr_correct weightu sat_limbs)).
+
+  (* not currently viable
+  Definition jump_divstep
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_jump_divstep_gen
+            @ GallinaReify.Reify (Qnum limbwidth)
+            @ GallinaReify.Reify (Z.pos (Qden limbwidth))
+            @ GallinaReify.Reify (machine_wordsize:Z)
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify sat_limbs
+            @ GallinaReify.Reify word_sat_mul_limbs
+            @ GallinaReify.Reify idxs
+            @ GallinaReify.Reify balance)
+         jump_divstep_input
+         jump_divstep_output.
+
+  Definition sjump_divstep (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "jump_divstep" jump_divstep
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => ["The function " ++ fname ++ " computes the body of the outer loop in BY-inversion (jumpdivstep version)."]%string)
+             (jump_divstep_correct weightu sat_limbs)).
+
+  Definition jump_divstep_hd
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_jump_divstep_hd_gen
+            @ GallinaReify.Reify (Qnum limbwidth)
+            @ GallinaReify.Reify (Z.pos (Qden limbwidth))
+            @ GallinaReify.Reify (machine_wordsize:Z)
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify sat_limbs
+            @ GallinaReify.Reify word_sat_mul_limbs
+            @ GallinaReify.Reify idxs
+            @ GallinaReify.Reify balance)
+         jump_divstep_input
+         jump_divstep_output.
+
+  Definition sjump_divstep_hd (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "jump_divstep_hd" jump_divstep_hd
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => ["The function " ++ fname ++ " computes the body of the outer loop in BY-inversion (half-delta jumpdivstep version)."]%string)
+             (jump_divstep_hd_correct weightu sat_limbs)).
+  *)
+
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
 
@@ -962,7 +1350,20 @@ Section __.
             ("relax", wrap_s srelax);
             ("selectznz", wrap_s sselectznz);
             ("to_bytes", wrap_s sto_bytes);
-            ("from_bytes", wrap_s sfrom_bytes)].
+            ("from_bytes", wrap_s sfrom_bytes);
+            ("one", wrap_s sone);
+            ("msat", wrap_s smsat);
+            ("divstep_precomp", wrap_s sdivstep_precomp);
+            ("divstep", wrap_s sdivstep);
+            ("sat_from_bytes", wrap_s ssat_from_bytes);
+            ("jumpdivstep_precomp", wrap_s sjumpdivstep_precomp);
+            ("jumpdivstep_precomp_hd", wrap_s sjumpdivstep_precomp_hd);
+            ("inner_loop", wrap_s sinner_loop);
+            ("inner_loop_hd", wrap_s sinner_loop_hd);
+            ("update_fg", wrap_s supdate_fg);
+            ("update_vr", wrap_s supdate_vr)].
+            (* ("jump_divstep", wrap_s sjump_divstep); *)
+            (* ("jump_divstep_hd", wrap_s sjump_divstep_hd)]. *)
 
     Definition valid_names : string
       := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions) ++ ", or 'carry_scmul' followed by a decimal literal".

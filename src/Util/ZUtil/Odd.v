@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.ZArith.Znumtheory.
+Require Import Coq.Bool.Bool.
 Require Import Coq.micromega.Lia.
 Local Open Scope Z_scope.
 
@@ -28,5 +29,11 @@ Module Z.
     rewrite Zmod_eq_full by assumption.
     rewrite <-Z.add_opp_r, Z.odd_add, Z.odd_opp, Z.odd_mul.
     case_eq (Z.odd b); intros; rewrite ?Bool.andb_true_r, ?Bool.andb_false_r; auto using Bool.xorb_false_r.
+  Qed.
+
+  Lemma odd_mod2m m a (Hm : 0 < m) : Z.odd (a mod 2 ^ m) = Z.odd a.
+  Proof.
+    rewrite Zdiv.Zmod_eq_full, Z.odd_sub, Z.odd_mul, Z.odd_pow by (lia || apply Z.pow_nonzero; lia).
+    now rewrite andb_false_r, xorb_false_r.
   Qed.
 End Z.

@@ -23,6 +23,7 @@ Ltac solve_range :=
            | [ |- _ /\ _ ] => split
            | [ |- _ <= _ < _ ] => split
            | [ |- _ / _ < _ ] => apply Z.div_lt_upper_bound
+           | [ |- _ <= _ / _ ] => apply Z.div_le_lower_bound
            | [ |- _ |' _ < 2 ^ _ ] => apply Z.lor_range
            | [ |- Z.truncating_shiftl _ _ _ < 2 ^ _ ] => apply Z.truncating_shiftl_range
            | _ => progress Z.zero_bounds

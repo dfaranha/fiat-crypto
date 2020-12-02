@@ -437,4 +437,25 @@ Module Z.
       rewrite (Zdiv2_odd_eqn b) at 1; rewrite E; ring_simplify;
         rewrite Pow.Z.pow_mul_base, Z.sub_simpl_r; lia.
     rewrite Z.mul_assoc, Pow.Z.pow_mul_base, Z.sub_simpl_r; lia. Qed.
+
+  Lemma div_sub_l :
+    forall a b c : Z, b <> 0 -> (a * b - c) / b = a + (- c / b).
+  Proof.
+    intros.
+    replace (_ - c) with (a * b + (- c)) by lia.
+    rewrite Z.div_add_l; auto.
+  Qed.
+
+  Lemma div_opp_1_l :
+    forall a, 0 < a -> (- 1) / a = - 1.
+  Proof.
+    intros.
+    destruct (Z.eq_dec a 1).
+    - subst. reflexivity.
+    - replace (-1) with (- (1)) by reflexivity.
+      rewrite Z_div_nz_opp_full, Z.div_1_l; rewrite ?Z.mod_1_l; lia.
+  Qed.
+
+  Lemma div_lt_lower_bound a b c : 0 < b -> b * (a + 1) <= c -> a < c / b.
+  Proof. intros; enough (a + 1 <= c / b) by lia; apply Z.div_le_lower_bound; assumption. Qed.
 End Z.
