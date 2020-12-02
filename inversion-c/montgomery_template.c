@@ -14,8 +14,8 @@
 #define ITERATIONS (((49 * LEN_PRIME) + 57) / 17)
 #endif
 
-#define SAT_LIMBS LIMBS + 1 /* we might need 2 more bits to represent m in twos complement */
-#define BYTES 8 * (((LEN_PRIME - 1) / 64) + 1)
+#define SAT_LIMBS (((LEN_PRIME - 1) / WORDSIZE) + 2) /* we might need 2 more bits to represent m in twos complement */
+#define BYTES (((LEN_PRIME - 1) / 8) + 1)
 
 void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
 

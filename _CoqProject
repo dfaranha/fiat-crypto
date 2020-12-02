@@ -32,6 +32,7 @@ src/Algebra/Ring.v
 src/Algebra/ScalarMult.v
 src/Algebra/SubsetoidRing.v
 src/Arithmetic/BYInv.v
+src/Arithmetic/BYInvJump.v
 src/Arithmetic/BarrettReduction.v
 src/Arithmetic/BaseConversion.v
 src/Arithmetic/Core.v
@@ -393,6 +394,7 @@ src/Util/ZUtil/N2Z.v
 src/Util/ZUtil/Notations.v
 src/Util/ZUtil/Odd.v
 src/Util/ZUtil/Ones.v
+src/Util/ZUtil/OnesAt.v
 src/Util/ZUtil/OnesFrom.v
 src/Util/ZUtil/Opp.v
 src/Util/ZUtil/Peano.v
@@ -404,12 +406,14 @@ src/Util/ZUtil/Rshi.v
 src/Util/ZUtil/Sgn.v
 src/Util/ZUtil/Shift.v
 src/Util/ZUtil/SignBit.v
+src/Util/ZUtil/SignExtend.v
 src/Util/ZUtil/Sorting.v
 src/Util/ZUtil/Stabilization.v
 src/Util/ZUtil/Tactics.v
 src/Util/ZUtil/Testbit.v
 src/Util/ZUtil/TruncatingShiftl.v
 src/Util/ZUtil/TwosComplement.v
+src/Util/ZUtil/TwosComplementMul.v
 src/Util/ZUtil/Z2Nat.v
 src/Util/ZUtil/ZSimplify.v
 src/Util/ZUtil/Zselect.v

@@ -21,7 +21,7 @@ Module Z.
 
   Ltac solve_testbit :=
     repeat (match goal with
-            | _ => progress autorewrite with testbit_rewrite; cbn [negb Z.b2z Z.eqb Z.ltb Z.leb Z.geb Z.gtb]
+            | _ => progress (autorewrite with testbit_rewrite; cbn [negb Z.b2z Z.eqb Z.ltb Z.leb Z.geb Z.gtb Z.b2z orb andb])
             | [ |- context[Z.testbit (2 ^ ?m) ?i] ] => rewrite Z.pow2_bits_full
             | [ |- context[Z.testbit (?a / 2)] ] =>
               replace (a / 2) with (a / 2 ^ 1) by (apply f_equal2; [reflexivity|apply Z.pow_1_r]); rewrite <- Z.shiftr_div_pow2 by lia

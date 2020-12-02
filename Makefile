@@ -164,9 +164,16 @@ BEDROCK2_$(1)_FUNCTIONS:=$(filter-out %msat %divstep %divstep_precomp, $(6))
 
 endef
 
-UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes
+INVERSION_FUNCTIONS := msat sat_from_bytes
+DIVSTEP_FUNCTIONS := divstep divstep_precomp
+JUMP_DIVSTEP_FUNCTIONS := twos_complement_word_full_divstep asr_mw_sub2  sat_add word_sat_mul jumpdivstep_precomp
+MONTGOMERY_INVERSION := twos_complement_word_to_montgomery_no_encode $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS)
+UNSATURATED_SOLINAS_INVERSION := word_to_solina $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body
+
+UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes one $(UNSATURATED_SOLINAS_INVERSION)
 FUNCTIONS_FOR_25519 := $(UNSATURATED_SOLINAS_FUNCTIONS) carry_scmul121666
-WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery to_montgomery nonzero selectznz to_bytes from_bytes one msat divstep divstep_precomp
+WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery to_montgomery nonzero selectznz to_bytes from_bytes one $(MONTGOMERY_INVERSION)
+
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
 WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/word_by_word_montgomery
 
