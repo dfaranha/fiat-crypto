@@ -3,9 +3,8 @@
 
 #define PRECOMP MAKE_FN_NAME(CURVE_DESCRIPTION,_jumpdivstep_precomp)
 #define MSAT MAKE_FN_NAME(CURVE_DESCRIPTION,_msat)
-#define MUL MAKE_FN_NAME(CURVE_DESCRIPTION,_carry_mul)
+#define MUL MAKE_FN_NAME(CURVE_DESCRIPTION,_mul)
 #define OPP MAKE_FN_NAME(CURVE_DESCRIPTION,_opp)
-#define CARRY MAKE_FN_NAME(CURVE_DESCRIPTION,_carry)
 
 #define BODY MAKE_FN_NAME(CURVE_DESCRIPTION,_outer_loop_body)	
 
@@ -25,7 +24,7 @@ void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
 
   WORD precomp[LIMBS];
 	PRECOMP(precomp);
-
+	
   WORD f1[SAT_LIMBS], f[SAT_LIMBS], g1[SAT_LIMBS];
   WORD v1[LIMBS], v[LIMBS];
   WORD r1[LIMBS], r[LIMBS];
@@ -45,11 +44,11 @@ void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
     for (int k = 0; k < LIMBS; k++) v[k] = v1[k];
     for (int k = 0; k < SAT_LIMBS; k++) f[k] = f1[k];
   }
-	
+
   WORD h[LIMBS];
   if (f[SAT_LIMBS - 1] >> (WORDSIZE - 1)) {
     OPP(h, v);
-		CARRY(v, h);
+    for (int l = 0; l < LIMBS; l++) v[l] = h[l];
   }
 
   MUL(out, v, precomp);

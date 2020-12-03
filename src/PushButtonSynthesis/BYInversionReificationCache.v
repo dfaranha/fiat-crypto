@@ -82,6 +82,15 @@ Module Export WordByWordMontgomery.
   Import BYInv.WordByWordMontgomery.
   Import BYInvJump.WordByWordMontgomery.
 
+  Derive reified_outer_loop_body_gen
+         SuchThat (is_reification_of reified_outer_loop_body_gen outer_loop_body)
+         As reified_outer_loop_body_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = _) => apply_cached_reification outer_loop_body (proj1 reified_outer_loop_body_gen_correct) : reify_cache_gen.
+  Hint Immediate (proj2 reified_outer_loop_body_gen_correct) : wf_gen_cache.
+  Hint Rewrite (proj1 reified_outer_loop_body_gen_correct) : interp_gen_cache.
+  Local Opaque reified_outer_loop_body_gen. (* needed for making [autorewrite] not take a very long time *)  
+  
   Derive reified_twos_complement_word_to_montgomery_no_encode_gen
          SuchThat (is_reification_of reified_twos_complement_word_to_montgomery_no_encode_gen twos_complement_word_to_montgomery_no_encode)
          As reified_twos_complement_word_to_montgomery_no_encode_gen_correct.
