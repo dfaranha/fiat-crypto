@@ -74,38 +74,6 @@ Definition sat_sign_extend machine_wordsize old_base new_base a :=
         let padding := repeat parity (new_base - old_base) in
         a ++ padding.
 
-
-
-Module WordByWordMontgomery.
-  Import WordByWordMontgomery.WordByWordMontgomery.
-
-  (* Converts a wordsized integer to montgomery domain *)
-  Definition twosc_word_to_montgomery machine_wordsize n m m' a :=
-    dlet cond := Z.twos_complement_neg machine_wordsize a in
-    dlet a_opp := Z.twos_complement_opp machine_wordsize a in
-    dlet a_enc := encodemod machine_wordsize n m m' a in
-    dlet a_opp_enc := encodemod machine_wordsize n m m' (a_opp) in
-    dlet a_opp_enc_opp := oppmod machine_wordsize n m (a_opp_enc) in
-    dlet res := select cond a_enc a_opp_enc_opp in res.
-
-  (* Converts a wordsize integer to montgomery domain (without multiplying by R2) *)
-  Definition twos_complement_word_to_montgomery_no_encode machine_wordsize n m a :=
-    dlet cond := Z.twos_complement_neg machine_wordsize a in
-    dlet a_opp := Z.twos_complement_opp machine_wordsize a in
-    dlet a_enc := Partition.partition (uweight machine_wordsize) n a in
-    dlet a_opp_enc := Partition.partition (uweight machine_wordsize) n a_opp in
-    dlet a_opp_enc_opp := oppmod machine_wordsize n m (a_opp_enc) in
-    dlet res := select cond a_enc a_opp_enc_opp in res.
-
-  Definition twosc_word_mod_m machine_wordsize n m a :=
-    dlet cond := Z.twos_complement_neg machine_wordsize a in
-          dlet a' := Z.zselect cond a (Z.twos_complement_opp machine_wordsize a) in
-                       let a'' := extend_to_length 1 n [a'] in
-                       let a''_opp := oppmod machine_wordsize n m a'' in
-                       select cond a'' a''_opp.
-
-End WordByWordMontgomery.
-
 Definition sat_word_bits machine_wordsize a :=
   nth_default 0 a 0 mod 2^(machine_wordsize - 2).
 
@@ -158,6 +126,68 @@ Definition divstep_spec_full' d f g u v q r :=
   else (1 + d, f, (g + (g mod 2) * f) / 2,
         2 * u, 2 * v, q + (g mod 2) * u, r + (g mod 2) * v).
 
+Module WordByWordMontgomery.
+  Import WordByWordMontgomery.WordByWordMontgomery.
+
+  Section __.
+    Context (machine_wordsize : Z)
+            (n : nat)
+            (sat_limbs : nat)
+            (word_sat_mul_limbs : nat)
+            (m : Z)
+            (m' : Z).
+    
+  (* Converts a wordsized integer to montgomery domain *)
+  Definition twosc_word_to_montgomery a :=
+    dlet cond := Z.twos_complement_neg machine_wordsize a in
+    dlet a_opp := Z.twos_complement_opp machine_wordsize a in
+    dlet a_enc := encodemod machine_wordsize n m m' a in
+    dlet a_opp_enc := encodemod machine_wordsize n m m' (a_opp) in
+    dlet a_opp_enc_opp := oppmod machine_wordsize n m (a_opp_enc) in
+    dlet res := select cond a_enc a_opp_enc_opp in res.
+
+  (* Converts a wordsize integer to montgomery domain (without multiplying by R2) *)
+  Definition twos_complement_word_to_montgomery_no_encode a :=
+    dlet cond := Z.twos_complement_neg machine_wordsize a in
+    dlet a_opp := Z.twos_complement_opp machine_wordsize a in
+    dlet a_enc := Partition.partition (uweight machine_wordsize) n a in
+    dlet a_opp_enc := Partition.partition (uweight machine_wordsize) n a_opp in
+    dlet a_opp_enc_opp := oppmod machine_wordsize n m (a_opp_enc) in
+    dlet res := select cond a_enc a_opp_enc_opp in res.
+
+  Definition twosc_word_mod_m a :=
+    dlet cond := Z.twos_complement_neg machine_wordsize a in
+          dlet a' := Z.zselect cond a (Z.twos_complement_opp machine_wordsize a) in
+                       let a'' := extend_to_length 1 n [a'] in
+                       let a''_opp := oppmod machine_wordsize n m a'' in
+                       select cond a'' a''_opp.
+
+  Definition outer_loop_body f g (v r : list Z) :=
+    let '(_,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_divstep_aux machine_wordsize data) (1,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+    dlet f2 := word_sat_mul machine_wordsize sat_limbs u1 f in
+    dlet f3 := word_sat_mul machine_wordsize sat_limbs v1 g in
+    dlet g2 := word_sat_mul machine_wordsize sat_limbs q1 f in
+    dlet g3 := word_sat_mul machine_wordsize sat_limbs r1 g in
+    dlet f4 := BYInv.sat_add machine_wordsize word_sat_mul_limbs f2 f3 in
+    dlet g4 := BYInv.sat_add machine_wordsize word_sat_mul_limbs g2 g3 in
+    dlet f5 := sat_arithmetic_shiftr machine_wordsize word_sat_mul_limbs f4 (machine_wordsize - 2) in
+    dlet g5 := sat_arithmetic_shiftr machine_wordsize word_sat_mul_limbs g4 (machine_wordsize - 2) in
+    dlet f6 := firstn sat_limbs f5 in
+    dlet g6 := firstn sat_limbs g5 in
+    dlet u2 := twos_complement_word_to_montgomery_no_encode u1 in
+    dlet v02 := twos_complement_word_to_montgomery_no_encode v1 in
+    dlet q2 := twos_complement_word_to_montgomery_no_encode q1 in
+    dlet r02 := twos_complement_word_to_montgomery_no_encode r1 in
+    dlet v2 := mulmod machine_wordsize n m m' u2 v in
+    dlet v3 := mulmod machine_wordsize n m m' v02 r in
+    dlet r2 := mulmod machine_wordsize n m m' q2 v in
+    dlet r3 := mulmod machine_wordsize n m m' r02 r in
+    dlet v4 := addmod machine_wordsize n m v2 v3 in
+    dlet r4 := addmod machine_wordsize n m r2 r3 in
+    (f6, g6, v4, r4).
+  End __.
+End WordByWordMontgomery.
+
 Module UnsaturatedSolinas.
   Section __.
       Context (limbwidth_num limbwidth_den : Z)
@@ -204,7 +234,7 @@ Module UnsaturatedSolinas.
     dlet v5 := carrymod limbwidth_num limbwidth_den s c n idxs v4 in
     dlet r4 := addmod limbwidth_num limbwidth_den n r2 r3 in
     dlet r5 := carrymod limbwidth_num limbwidth_den s c n idxs r4 in
-    (f6, g6, v, r).
+    (f6, g6, v5, r5).
   End __.
 End UnsaturatedSolinas.
   

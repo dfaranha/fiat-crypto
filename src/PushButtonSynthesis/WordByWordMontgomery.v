@@ -209,6 +209,18 @@ Section __.
      Some r[0~>2^machine_wordsize - 1],
      Some r[0~>2^machine_wordsize - 1])%zrange.
 
+  Definition loop_input :=
+    (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+     (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+      (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) n),
+       (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) n), tt))))%zrange.
+
+  Definition loop_output :=
+    (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+     Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+     Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) n),
+     Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) n))%zrange.
+
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
   Definition possible_values_of_machine_wordsize
@@ -867,7 +879,11 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_encode_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m' @ GallinaReify.Reify jumpdivstep_precompmod)
+            @ GallinaReify.Reify machine_wordsize
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify m
+            @ GallinaReify.Reify m'
+            @ GallinaReify.Reify jumpdivstep_precompmod)
          tt
          (Some bounds).
 
@@ -880,6 +896,32 @@ Section __.
              prefix
              (fun fname => ["The function " ++ fname ++ " returns the precomputed value for the jump-version of Bernstein-Yang-inversion (in montgomery form)."]%string)
              (divstep_precomp_correct machine_wordsize n m valid from_montgomery_res)).
+
+  Definition outer_loop_body
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_outer_loop_body_gen
+            @ GallinaReify.Reify machine_wordsize
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify sat_limbs
+            @ GallinaReify.Reify word_sat_mul_limbs
+            @ GallinaReify.Reify m
+            @ GallinaReify.Reify m')
+         loop_input
+         loop_output.
+
+  Definition souter_loop_body (prefix : string)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToString
+          machine_wordsize prefix "outer_loop_body" outer_loop_body
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " computes the body of the outer loop in BY-inversion (jumpdivstep version)."]%string)
+             (forall v, valid v)).
+             (* (outer_loop_body_correct weightu sat_limbs)). *)
 
   Lemma bounded_by_of_valid x
         (H : valid x)
@@ -1307,7 +1349,8 @@ Section __.
             ("twos_complement_word_to_montgomery_no_encode", wrap_s stwos_complement_word_to_montgomery_no_encode);
             ("sat_add", wrap_s ssat_add);
             ("word_sat_mul", wrap_s sword_sat_mul);
-            ("jumpdivstep_precomp", wrap_s sjumpdivstep_precomp)].
+            ("jumpdivstep_precomp", wrap_s sjumpdivstep_precomp);
+            ("outer_loop_body", wrap_s souter_loop_body)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 

@@ -221,7 +221,7 @@ endef
 INVERSION_FUNCTIONS := msat sat_from_bytes
 DIVSTEP_FUNCTIONS := divstep divstep_precomp
 JUMP_DIVSTEP_FUNCTIONS := twos_complement_word_full_divstep asr_mw_sub2  sat_add word_sat_mul jumpdivstep_precomp
-MONTGOMERY_INVERSION := twos_complement_word_to_montgomery_no_encode $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS)
+MONTGOMERY_INVERSION := twos_complement_word_to_montgomery_no_encode $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body
 UNSATURATED_SOLINAS_INVERSION := word_to_solina $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body
 
 UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes one relax $(UNSATURATED_SOLINAS_INVERSION)

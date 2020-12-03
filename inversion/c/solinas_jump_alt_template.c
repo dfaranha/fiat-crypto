@@ -19,7 +19,7 @@
 #define BYTES (((LEN_PRIME - 1) / 8) + 1)
 
 #define INNER_LOOP (WORDSIZE - 2)
-#define OUTER_LOOP (ITERATIONS / INNER_LOOP) + 1
+#define OUTER_LOOP ((ITERATIONS / INNER_LOOP) + 1)
 
 void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
 
