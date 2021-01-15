@@ -1255,10 +1255,8 @@ Module Export UnsaturatedSolinas.
 
   Lemma divstep_v balance d f g v r
         (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
-
         (mw0 : 0 < machine_wordsize)
         (sat_limbs0 : (0 < sat_limbs)%nat)
-        (mont_limbs0 : (0 < limbs)%nat)
         (Hv : length v = limbs)
         (Hr : length r = limbs)
         (Hg : length g = sat_limbs)
@@ -1279,17 +1277,16 @@ Module Export UnsaturatedSolinas.
     rewrite twos_complement_pos'_spec.
 
     rewrite twos_complement_pos_spec, <- (eval_twos_complement_sat_mod2 machine_wordsize sat_limbs) by lia.
-    rewrite Zmod_odd, (select_eq (uweight machine_wordsize) _ limbs); auto. Admitted.
-    (* unfold divstep_spec2. *)
-    (* destruct (0 <? Z.twos_complement machine_wordsize d); *)
-    (*   destruct (Z.odd (eval_twos_complement machine_wordsize sat_limbs g));  *)
-    (*   rewrite ?(eval_addmod), ?Z.add_diag; auto; apply limbwidth_good. Qed. *)
+    rewrite Zmod_odd, (select_eq (uweight machine_wordsize) _ limbs); auto.
+    unfold divstep_spec2.
+    destruct (0 <? Z.twos_complement machine_wordsize d);
+      destruct (Z.odd (eval_twos_complement machine_wordsize sat_limbs g)); cbn -[Z.mul Z.add];
+        rewrite ?eval_carrymod, ?eval_addmod; unfold addmod; try (try apply f_equal2; lia); apply length_add; auto. Qed.
 
   Lemma divstep_r balance d f g v r
         (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
         (mw0 : 0 < machine_wordsize)
         (sat_limbs0 : (0 < sat_limbs)%nat)
-        (mont_limbs0 : (0 < limbs)%nat)
         (length_balance : length balance = limbs)
         (eval_balance : eval balance mod (s - Associational.eval c) = 0)
         (Hv : length v = limbs)
@@ -1308,10 +1305,8 @@ Module Export UnsaturatedSolinas.
                                               (eval r)).
   Proof.
     assert (sat_limbs0' : (sat_limbs <> 0%nat)) by lia.
-    assert (mont_limbs0' : limbs <> 0%nat) by lia.
+    assert (limbs0' : limbs <> 0%nat) by lia.
     unfold divstep_spec2.
-    (* pose proof (eval_oppmod limbwidth_num limbwidth_den limbwidth_good s c limbs m_nz s_nz balance). *)
-    (* destruct H as [H1 H2]. *)
     cbn -[Z.mul oppmod sat_opp select].
     rewrite select_push; rewrite ?length_sat_opp; auto.
     rewrite sat_opp_mod2; auto.
@@ -1321,47 +1316,21 @@ Module Export UnsaturatedSolinas.
       try apply length_select; auto.
     destruct (0 <? Z.twos_complement machine_wordsize d);
       destruct (Z.odd (eval_twos_complement machine_wordsize sat_limbs g)); cbn -[Z.mul oppmod].
-    - rewrite eval_carrymod, eval_addmod; auto.
-      rewrite <- Zplus_mod_idemp_l; auto.
-      rewrite eval_carrymod, eval_oppmod; auto.
-      rewrite Zplus_mod_idemp_l; auto.
+    - rewrite eval_carrymod, eval_addmod, <- Zplus_mod_idemp_l, eval_carrymod, eval_oppmod, Zplus_mod_idemp_l; auto.
       rewrite Z.add_comm; unfold Z.sub; auto.
-      unfold oppmod. apply length_opp. assumption. assumption.
-      unfold carrymod.
-      rewrite length_chained_carries. reflexivity.
-      unfold oppmod. apply length_opp. assumption. assumption.
-      Admitted.
-    (* - rewrite (eval_addmod); auto. *)
-    (*   rewrite <- Zplus_mod_idemp_r; auto. *)
-    (*   unfold zeromod. *)
-    (*   unfold encodemod. *)
-    (*   rewrite eval_encode. *)
-    (*   rewrite Z.mul_0_l, ?Z.add_0_r; auto. *)
-    (*   unfold weight. rewrite Z.mul_0_r. reflexivity. *)
-    (*   intros. unfold weight. apply Z.pow_nonzero. lia.  Admitted. *)
-    (* - rewrite (eval_addmod _ _ _ r'); auto. *)
-    (*   rewrite Z.mul_1_l; auto. *)
-    (* - rewrite (eval_addmod _ _ _ r'); auto. *)
-    (*   rewrite <- Zplus_mod_idemp_r; auto. *)
-    (*   rewrite H3. *)
-    (*   rewrite Z.mul_0_l, Z.add_0_r; auto. *)
-    (* - apply length_sat_zero. *)
-    (* - unfold oppmod, WordByWordMontgomery.opp, *)
-    (*   WordByWordMontgomery.sub, Rows.sub_then_maybe_add, Rows.add. *)
-    (*   destruct (Rows.sub (uweight machine_wordsize) mont_limbs (zeros mont_limbs)) eqn:E. *)
-    (*   destruct (Rows.flatten (uweight machine_wordsize) mont_limbs *)
-    (*                          [l; zselect (2 ^ machine_wordsize - 1) (- z) (Partition.partition (uweight machine_wordsize) mont_limbs m)]) eqn:E2. *)
-    (*   simpl. *)
-    (*   inversion E; subst. *)
-    (*   inversion E2. *)
-    (*   apply Rows.length_sum_rows. *)
-    (*   apply (uwprops machine_wordsize mw0). *)
-    (*   apply Rows.length_sum_rows. *)
-    (*   apply (uwprops machine_wordsize mw0). *)
-    (*   apply length_zeros. *)
-    (*   apply map_length. *)
-    (*   rewrite length_zselect. *)
-    (*   apply length_partition. Qed. *)
+      all: unfold addmod, oppmod, carrymod; auto with distr_length.
+    - rewrite eval_carrymod, eval_addmod, <- Zplus_mod_idemp_r.
+      unfold zeromod.
+      rewrite eval_encodemod, Z.mod_0_l, Z.mul_0_l. reflexivity.
+      all: unfold addmod, oppmod, carrymod, zeromod, encodemod; auto with distr_length.
+    - rewrite eval_carrymod, eval_addmod, Z.mul_1_l. reflexivity.
+      all: auto; try lia; unfold addmod; auto with distr_length.
+    - rewrite eval_carrymod, eval_addmod, <- Zplus_mod_idemp_r.
+      unfold zeromod.
+      rewrite eval_encodemod, Z.mod_0_l, Z.mul_0_l. reflexivity.
+      all: unfold addmod, zeromod, encodemod; auto with distr_length.
+    - unfold zeromod, encodemod; auto with distr_length.
+    - unfold carrymod, oppmod; auto with distr_length. Qed.
 
   Lemma divstep_spec_divstep_spec_full_d m d f g v r :
     fst (fst (divstep_spec d f g)) = fst (fst (fst (fst (divstep_spec_full m d f g v r)))).
@@ -1388,52 +1357,49 @@ Module Export UnsaturatedSolinas.
   Proof. unfold divstep_spec2, divstep_spec_full.
          destruct ((0 <? d) && Z.odd g); reflexivity. Qed.
 
-  (* TODO: state and prove this *)
-
-  (* Theorem divstep_correct_full machine_wordsize sat_limbs mont_limbs m r' m' d f g v r *)
-  (*         (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true) *)
-  (*         (r'_correct : (2 ^ machine_wordsize * r') mod m = 1) *)
-  (*         (m'_correct : (m * m') mod 2 ^ machine_wordsize = -1 mod 2 ^ machine_wordsize) *)
-  (*         (m_big : 1 < m) *)
-  (*         (m_small : m < (2 ^ machine_wordsize) ^ Z.of_nat mont_limbs) *)
-  (*         (mw1 : 1 < machine_wordsize) *)
-  (*         (sat_limbs0 : (0 < sat_limbs)%nat) *)
-  (*         (mont_limbs0 : (0 < mont_limbs)%nat) *)
-  (*         (Hv : length v = mont_limbs) *)
-  (*         (Hr : length r = mont_limbs) *)
-  (*         (Hf : length f = sat_limbs) *)
-  (*         (Hg : length g = sat_limbs) *)
-  (*         (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 < *)
-  (*                       Z.twos_complement machine_wordsize d < *)
-  (*                       2 ^ (machine_wordsize - 1) - 1) *)
-  (*         (overflow_f : - 2 ^ (machine_wordsize * sat_limbs - 2) < *)
-  (*                       eval_twos_complement machine_wordsize sat_limbs f < *)
-  (*                       2 ^ (machine_wordsize * sat_limbs - 2)) *)
-  (*         (overflow_g : - 2 ^ (machine_wordsize * sat_limbs - 2) < *)
-  (*                       eval_twos_complement machine_wordsize sat_limbs g < *)
-  (*                       2 ^ (machine_wordsize * sat_limbs - 2)) *)
-  (*         (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize) *)
-  (*         (Hg2 : forall z, In z g -> 0 <= z < 2^machine_wordsize) *)
-  (*   let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in *)
-  (*   (Z.twos_complement machine_wordsize d1, *)
-  (*    eval_twos_complement machine_wordsize sat_limbs f1, *)
-  (*    eval_twos_complement machine_wordsize sat_limbs g1, *)
-  (*    @WordByWordMontgomery.eval machine_wordsize mont_limbs (from_montgomerymod machine_wordsize mont_limbs m m' v1) mod m, *)
-  (*    @WordByWordMontgomery.eval machine_wordsize mont_limbs (from_montgomerymod machine_wordsize mont_limbs m m' r1) mod m) = *)
-  (*   divstep_spec_full m (Z.twos_complement machine_wordsize d) *)
-  (*                     (eval_twos_complement machine_wordsize sat_limbs f) *)
-  (*                     (eval_twos_complement machine_wordsize sat_limbs g) *)
-  (*                     (@WordByWordMontgomery.eval machine_wordsize mont_limbs (from_montgomerymod machine_wordsize mont_limbs m m' v)) *)
-  (*                     (@WordByWordMontgomery.eval machine_wordsize mont_limbs (from_montgomerymod machine_wordsize mont_limbs m m' r)). *)
-  (* Proof. *)
-  (*   assert (0 < machine_wordsize) by lia. *)
-  (*   repeat apply injective_projections. *)
-  (*   rewrite <- divstep_spec_divstep_spec_full_d, <- (divstep_d _ _ mont_limbs m _ _ _ v r); auto. *)
-  (*   rewrite <- divstep_spec_divstep_spec_full_f, <- (divstep_f _ _ mont_limbs m _ _ _ v r); auto; lia. *)
-  (*   rewrite <- divstep_spec_divstep_spec_full_g, <- (divstep_g _ _ mont_limbs m _ _ _ v r); auto; lia. *)
-  (*   rewrite <- divstep_spec2_divstep_spec_full_v; *)
-  (*     rewrite <- (divstep_v _ _ _ _ r' _ _ f _ _ _); auto. *)
-  (*   rewrite <- divstep_spec2_divstep_spec_full_r; *)
-  (*     rewrite <- (divstep_r _ _ _ _ r' _ _ f _ _ _); auto. Qed.   *)
+  Theorem divstep_correct_full balance d f g v r
+        (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
+        (mw1 : 1 < machine_wordsize)
+        (sat_limbs0 : (0 < sat_limbs)%nat)
+        (length_balance : length balance = limbs)
+        (eval_balance : eval balance mod (s - Associational.eval c) = 0)
+        (Hv : length v = limbs)
+        (Hr : length r = limbs)
+        (Hf : length f = sat_limbs)
+        (Hg : length g = sat_limbs)
+          (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
+                        Z.twos_complement machine_wordsize d <
+                        2 ^ (machine_wordsize - 1) - 1)
+          (overflow_f : - 2 ^ (machine_wordsize * sat_limbs - 2) <
+                        eval_twos_complement machine_wordsize sat_limbs f <
+                        2 ^ (machine_wordsize * sat_limbs - 2))
+          (overflow_g : - 2 ^ (machine_wordsize * sat_limbs - 2) <
+                        eval_twos_complement machine_wordsize sat_limbs g <
+                        2 ^ (machine_wordsize * sat_limbs - 2))
+          (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize)
+          (Hg2 : forall z, In z g -> 0 <= z < 2^machine_wordsize) :
+    let '(d1,f1,g1,v1,r1) := (divstep balance d f g v r) in
+    (Z.twos_complement machine_wordsize d1,
+     eval_twos_complement machine_wordsize sat_limbs f1,
+     eval_twos_complement machine_wordsize sat_limbs g1,
+     (eval v1) mod (s - Associational.eval c),
+     (eval r1) mod (s - Associational.eval c)) =
+    divstep_spec_full (s - Associational.eval c)
+      (Z.twos_complement machine_wordsize d)
+      (eval_twos_complement machine_wordsize sat_limbs f)
+      (eval_twos_complement machine_wordsize sat_limbs g)
+      (eval v)
+      (eval r).
+    Proof.
+      assert (0 < machine_wordsize) by lia.
+      repeat apply injective_projections.
+      erewrite <- divstep_spec_divstep_spec_full_d, <- (divstep_d _ _ _ _ _ _ _ _ _ _); auto.
+      erewrite <- divstep_spec_divstep_spec_full_f, <- (divstep_f _ _ _ _ _ _ _ _ _ _); auto; lia.
+      erewrite <- divstep_spec_divstep_spec_full_g, <- (divstep_g _ _ _ _ _ _ _ _ _ _); auto; lia.
+      erewrite <- divstep_spec2_divstep_spec_full_v;
+        erewrite <- (divstep_v balance d f g v r fodd  _ _ _ _ _ _); auto.
+      erewrite <- divstep_spec2_divstep_spec_full_r;
+        erewrite <- (divstep_r balance d f g v r fodd _ _ _ _ _ _); auto.
+      Unshelve. all: auto; try lia. Qed.
   End __.
 End UnsaturatedSolinas.

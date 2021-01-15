@@ -206,6 +206,7 @@ Section __.
     := prefix_with_carry_bytes [machine_wordsize; 2 * machine_wordsize]%Z.
 
   Let possible_values := possible_values_of_machine_wordsize.
+  Let possible_values_no_bit := [0; machine_wordsize; 2 * machine_wordsize].
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
   Definition bounds : list (ZRange.type.option.interp base.type.Z)
     := Option.invert_Some saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
@@ -798,7 +799,7 @@ Section __.
     := Pipeline.BoundsPipeline
          true (* subst01 *)
          None (* fancy *)
-         possible_values
+         possible_values_no_bit
          (reified_encode_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify divstep_precompmod)
          tt
@@ -969,7 +970,7 @@ Section __.
     := Pipeline.BoundsPipeline
          true (* subst01 *)
          None (* fancy *)
-         possible_values
+         possible_values_no_bit
          (reified_encode_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify jumpdivstep_precompmod)
          tt
