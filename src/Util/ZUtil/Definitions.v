@@ -150,7 +150,7 @@ Module Z.
     ((Z.lnot_modulo a (2 ^ m)) + 1) mod (2 ^ m).
 
   (* Check if a number considered in twos complement of bitwidth m is negative *)
-  Definition twos_complement_neg m a := a >> (m - 1).
+  Definition twos_complement_neg m a := (a mod 2 ^ m) >> (m - 1).
 
   (* note the corner case condition: when f is exactly 2 to the mw-1'th power, then -f = f and
    so checking that -f is negative does not work in that case.

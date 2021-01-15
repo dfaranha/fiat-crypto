@@ -69,70 +69,6 @@ Time Redirect "log" Compute
                (Some (repeat (@None _) 5), tt)
                ZRange.type.base.option.None).
 
-Require Import BYInv.
-Require Import Crypto.UnsaturatedSolinasHeuristics.
-Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
-
-Local Instance : tight_upperbound_fraction_opt := 0%Q.
-Local Open Scope Z.
-Import UnsaturatedSolinas.
-Let balance := balance 5 (2^255) [(1,19)].
-Let sat_limbs := 6%nat.
-Let limbs := 5%nat.
-Let machine_wordsize := 64.
-Let limbwidth_den := 51.
-Let limbwidth_num := 1.
-Let c := [(1,19)].
-Let s := 2^255.
-Definition idxs : list nat := carry_chains limbs s c.
-
-Require Import Crypto.Util.LetIn.
-Require Import Crypto.Util.ZUtil.Definitions.
-
-
-  Definition divstep_aux (data : Z * (list Z) * (list Z) * (list Z) * (list Z)) :=
-    let '(d,f,g,v,r) := data in
-    dlet cond := Z.land (twos_complement_pos' machine_wordsize d) (sat_mod2 g) in
-    dlet d' := Z.zselect cond d (twos_complement_opp' machine_wordsize d) in
-    dlet f' := select cond f g in
-    dlet g' := select cond g (sat_opp machine_wordsize sat_limbs f) in
-    dlet v' := select cond v r in
-    dlet v'':= addmod limbwidth_num limbwidth_den limbs v' v' in
-    (* dlet r' := select cond r (oppmod limbwidth_num limbwidth_den limbs balance v) in *)
-    dlet g0 := sat_mod2 g' in
-    dlet d'' := (fst (Z.add_get_carry_full (2^machine_wordsize) d' 1)) in
-    dlet f'' := select g0 (sat_zero sat_limbs) f' in
-    dlet g'' := sat_arithmetic_shiftr1 machine_wordsize sat_limbs (BYInv.sat_add machine_wordsize sat_limbs g' f'') in
-    dlet v''' := select g0 (zeromod limbwidth_num limbwidth_den s c limbs) v' in
-    dlet r'' :=  (addmod limbwidth_num limbwidth_den limbs r v''') in
-   dlet r''' := carrymod limbwidth_num limbwidth_den s c limbs idxs r'' in
-   (d'',f',g'',v'',r'').
-  
-  Definition divstep d f g v r :=
-    divstep_aux (d, f, g, v, r).
-
-Definition divstep_input :=
-  (Some r[0~>2^machine_wordsize-1],
-   (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
-    (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
-     (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) limbs),
-      (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) limbs),tt)))))%zrange.
-
-Definition divstep_output :=
-  (Some r[0~>2^machine_wordsize-1],
-   Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
-   Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
-   Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) limbs),
-   Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) limbs))%zrange.
-
-Time Compute
-     (Pipeline.BoundsPipeline
-        false None [1; 64; 128]
-        ltac:(let r := Reify (divstep) in
-              exact r)
-               divstep_input
-               divstep_output).
-
 Local Existing Instance ToString.C.OutputCAPI.
 Local Existing Instance default_language_naming_conventions.
 Local Existing Instance default_documentation_options.
@@ -145,17 +81,6 @@ Local Instance : internal_static_opt := true.
 Local Instance : inline_opt := true.
 Local Instance : inline_internal_opt := true.
 Local Instance : emit_primitives_opt := true.
-
-Time Compute
-  (Pipeline.BoundsPipelineToString
-     "fiat_" "fiat_mulx_u64"
-        true None [64; 128] 64
-        ltac:(let r := Reify (divstep) in
-              exact r)
-               (fun _ _ => [])
-               (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt))%zrange
-               (Some r[0~>2^64-1], Some r[0~>2^64-1])%zrange).
-
 
 Time Redirect "log" Compute
   (Pipeline.BoundsPipelineToString

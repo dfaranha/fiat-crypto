@@ -487,6 +487,19 @@ Lemma twos_complement_opp_spec m a
 Proof. apply Z.twos_complement_spec; [lia|split]; [|pose proof Z.twos_complement_bounds m a Hm; lia].
        rewrite <- twos_complement_zopp, twos_complement_opp_correct, Z.twos_complement_mod', Z.mod_mod by (try apply Z.pow_nonzero; lia). reflexivity. Qed.
 
+(* Move this *)
+Lemma odd_mod2m m a (Hm : 0 < m) : Z.odd (a mod 2 ^ m) = Z.odd a.
+Proof.
+  rewrite Zdiv.Zmod_eq_full, Z.odd_sub, Z.odd_mul, Z.odd_pow. rewrite andb_false_r, xorb_false_r. reflexivity.
+  assumption. apply Z.pow_nonzero. lia. lia. Qed.
+
+Lemma twos_complement_opp_odd m a (Hm : 0 < m) (aodd : Z.odd a = true) :
+  Z.odd (Z.twos_complement_opp m a) = true.
+Proof.
+  unfold Z.twos_complement_opp. unfold Z.lnot_modulo. unfold Z.lnot.
+  rewrite Zplus_mod_idemp_l. replace (Z.pred (- a) + 1) with (-a) by lia. rewrite odd_mod2m.
+  rewrite Z.odd_opp. assumption. assumption. Qed.
+
 (************************* *)
 (**Properties of twos_complement_pos *)
 (************************* *)
