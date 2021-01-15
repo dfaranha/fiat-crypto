@@ -138,56 +138,6 @@ Fixpoint divstep_full_iter m d f g v r n :=
   | S n => let '(d, f, g, v, r) := divstep_full_iter m d f g v r n in divstep_spec_full m d f g v r
   end.
 
-Module UnsaturatedSolinas.
-  Section __.
-      Context (limbwidth_num limbwidth_den : Z)
-              (limbwidth_good : 0 < limbwidth_den <= limbwidth_num)
-              (machine_wordsize : Z)
-              (s : Z)
-              (c : list (Z*Z))
-              (n : nat)
-              (sat_limbs : nat)
-              (word_sat_mul_limbs : nat)
-              (idxs : list nat)
-              (balance : list Z).
-
-  Definition word_to_solina a :=
-    dlet cond := Z.twos_complement_neg machine_wordsize a in
-    dlet a_opp := Z.twos_complement_opp machine_wordsize a in
-    dlet a_enc := encodemod limbwidth_num limbwidth_den s c n a in
-    dlet a_opp_enc := encodemod limbwidth_num limbwidth_den s c n (a_opp) in
-    dlet a_opp_enc_opp := oppmod limbwidth_num limbwidth_den n balance (a_opp_enc) in
-    dlet a_opp_enc_opp_carry := carrymod limbwidth_num limbwidth_den s c n idxs a_opp_enc_opp in
-    dlet res := select cond a_enc a_opp_enc_opp_carry in res.
-
-  Definition outer_loop_body f g (v r : list Z) :=
-    let '(_,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_divstep_aux machine_wordsize data) (1,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
-    dlet f2 := word_sat_mul machine_wordsize sat_limbs u1 f in
-    dlet f3 := word_sat_mul machine_wordsize sat_limbs v1 g in
-    dlet g2 := word_sat_mul machine_wordsize sat_limbs q1 f in
-    dlet g3 := word_sat_mul machine_wordsize sat_limbs r1 g in
-    dlet f4 := BYInv.sat_add machine_wordsize word_sat_mul_limbs f2 f3 in
-    dlet g4 := BYInv.sat_add machine_wordsize word_sat_mul_limbs g2 g3 in
-    dlet f5 := sat_arithmetic_shiftr machine_wordsize word_sat_mul_limbs f4 (machine_wordsize - 2) in
-    dlet g5 := sat_arithmetic_shiftr machine_wordsize word_sat_mul_limbs g4 (machine_wordsize - 2) in
-    dlet f6 := firstn sat_limbs f5 in
-    dlet g6 := firstn sat_limbs g5 in
-    dlet u2 := word_to_solina u1 in
-    dlet v02 := word_to_solina v1 in
-    dlet q2 := word_to_solina q1 in
-    dlet r02 := word_to_solina r1 in
-    dlet v2 := carry_mulmod limbwidth_num limbwidth_den s c n idxs u2 v in
-    dlet v3 := carry_mulmod limbwidth_num limbwidth_den s c n idxs v02 r in
-    dlet r2 := carry_mulmod limbwidth_num limbwidth_den s c n idxs q2 v in
-    dlet r3 := carry_mulmod limbwidth_num limbwidth_den s c n idxs r02 r in
-    dlet v4 := addmod limbwidth_num limbwidth_den n v2 v3 in
-    dlet v5 := carrymod limbwidth_num limbwidth_den s c n idxs v4 in
-    dlet r4 := addmod limbwidth_num limbwidth_den n r2 r3 in
-    dlet r5 := carrymod limbwidth_num limbwidth_den s c n idxs r4 in
-    (f6, g6, v5, r5).
-  End __.
-End UnsaturatedSolinas.
-
 (**Brief section on twos_complement_neg (move at some point)  *)
 
 Lemma twos_complement_neg_spec m a
@@ -1703,6 +1653,35 @@ Proof.
   apply Z.pow_nonzero. lia. lia.
   apply Z.pow_nonzero. lia. lia. Qed.
 
+(* TODO: Move thise *)
+Lemma fold_right_fold_left_lemma {A B : Type} (f : B -> A -> A) (l s : list B) (a : A) :
+  (forall x x' y, f x y = f x' y) -> length l = length s -> fold_left (fun i j => f j i) l a = fold_right f a s.
+Proof.
+  rewrite <- fold_left_rev_right. revert s a.
+  induction l; intros.
+  - assert (s = []) by (destruct s; simpl in *; try lia; reflexivity); subst. reflexivity.
+  - simpl. rewrite fold_right_snoc. replace s with (rev (rev s)) by (apply rev_involutive).
+    destruct (rev s) eqn:E.
+    apply (f_equal (@rev B)) in E. rewrite rev_involutive in E. subst. simpl in *. lia.
+    simpl. rewrite fold_right_snoc.
+    replace (f a a0) with (f b a0). apply IHl. assumption.
+    apply (f_equal (@length B)) in E. simpl in *.
+    rewrite rev_length in *. lia. apply H. Qed.
+
+Lemma pow_ineq k : (2 <= k)%nat -> k + 2 <= Zpower_nat 2 k.
+Proof.
+  induction k; intros.
+  - lia.
+  - destruct k.
+    + lia.
+    + rewrite Zpower_nat_succ_r.
+      * destruct k. simpl. lia. lia. Qed.
+
+Lemma pow_ineq_Z k : 2 <= k -> k + 2 <= 2 ^ k.
+Proof.
+  intros. replace k with (Z.of_nat (Z.to_nat k)).
+  rewrite <- Zpower_nat_Z. apply pow_ineq. lia. lia. Qed.
+
 Module WordByWordMontgomery.
   Import WordByWordMontgomery.WordByWordMontgomery.
 
@@ -1740,7 +1719,7 @@ Module WordByWordMontgomery.
     Lemma twos_complement_word_to_montgomery_no_encode_correct a
           (Hmw : 0 < machine_wordsize)
           (Hn : (1 < n)%nat)
-          (Hm : 1 < m)
+          (* (Hm : 1 < m) *)
           (Ha : 0 <= a < 2 ^ machine_wordsize)
       :
         @eval machine_wordsize n (twos_complement_word_to_montgomery_no_encode a) mod m = Z.twos_complement machine_wordsize a mod m
@@ -1887,34 +1866,6 @@ Module WordByWordMontgomery.
       dlet v4 := addmod machine_wordsize n m v2 v3 in
       dlet r4 := addmod machine_wordsize n m r2 r3 in
       (f6, g6, v4, r4).
-
-    Lemma pow_ineq k : (2 <= k)%nat -> k + 2 <= Zpower_nat 2 k.
-    Proof.
-      induction k; intros.
-      - lia.
-      - destruct k.
-        + lia.
-        + rewrite Zpower_nat_succ_r.
-          * destruct k. simpl. lia. lia. Qed.
-
-    Lemma pow_ineq_Z k : 2 <= k -> k + 2 <= 2 ^ k.
-    Proof.
-      intros. replace k with (Z.of_nat (Z.to_nat k)).
-      rewrite <- Zpower_nat_Z. apply pow_ineq. lia. lia. Qed.
-
-    Lemma fold_right_fold_left_lemma {A B : Type} (f : B -> A -> A) (l s : list B) (a : A) :
-      (forall x x' y, f x y = f x' y) -> length l = length s -> fold_left (fun i j => f j i) l a = fold_right f a s.
-    Proof.
-      rewrite <- fold_left_rev_right. revert s a.
-      induction l; intros.
-      - assert (s = []) by (destruct s; simpl in *; try lia; reflexivity); subst. reflexivity.
-      - simpl. rewrite fold_right_snoc. replace s with (rev (rev s)) by (apply rev_involutive).
-        destruct (rev s) eqn:E.
-        apply (f_equal (@rev B)) in E. rewrite rev_involutive in E. subst. simpl in *. lia.
-        simpl. rewrite fold_right_snoc.
-        replace (f a a0) with (f b a0). apply IHl. assumption.
-        apply (f_equal (@length B)) in E. simpl in *.
-        rewrite rev_length in *. lia. apply H. Qed.
 
     (** Correctness of outer loop body  *)
     Theorem outer_loop_body_correct f g v r
@@ -2323,3 +2274,454 @@ Unshelve.
       rewrite !Z.twos_complement_mod_smaller_pow. reflexivity. lia. nia. lia. lia. assumption. assumption. Qed.
   End __.
 End WordByWordMontgomery.
+
+Module UnsaturatedSolinas.
+  Section __.
+
+    Context (limbwidth_num limbwidth_den : Z)
+            (limbwidth_good : 0 < limbwidth_den <= limbwidth_num)
+            (machine_wordsize : Z)
+            (s : Z)
+            (c : list (Z*Z))
+            (n : nat)
+            (sat_limbs : nat)
+            (word_sat_mul_limbs : nat)
+            (idxs : list nat)
+            (m_big : 2 ^ machine_wordsize < s - Associational.eval c)
+            (len_c : nat)
+            (len_idxs : nat)
+            (m_nz:s - Associational.eval c <> 0) (s_nz:s <> 0)
+            (Hn_nz : n <> 0%nat)
+            (Hc : length c = len_c)
+            (Hidxs : length idxs = len_idxs).
+    
+    Notation eval := (Positional.eval (weight (limbwidth_num) (limbwidth_den)) n).
+
+    Context (balance : list Z)
+            (length_balance : length balance = n)
+            (eval_balance : eval balance mod (s - Associational.eval c) = 0).
+
+    Definition word_to_solina a :=
+      dlet cond := Z.twos_complement_neg machine_wordsize a in
+      dlet a_opp := Z.twos_complement_opp machine_wordsize a in
+      dlet a_enc := encodemod limbwidth_num limbwidth_den s c n a in
+      dlet a_opp_enc := encodemod limbwidth_num limbwidth_den s c n (a_opp) in
+      dlet a_opp_enc_opp := oppmod limbwidth_num limbwidth_den n balance (a_opp_enc) in
+      dlet a_opp_enc_opp_carry := carrymod limbwidth_num limbwidth_den s c n idxs a_opp_enc_opp in
+      dlet res := select cond a_enc a_opp_enc_opp_carry in res.
+
+    Lemma word_to_solina_length a :
+      length (word_to_solina a) = n.
+    Proof.
+      unfold word_to_solina. 
+      rewrite !unfold_Let_In; rewrite length_select with (n:=n);
+        unfold carrymod, oppmod, encodemod; auto with distr_length. Qed.
+
+    Hint Resolve word_to_solina_length : distr_length.
+    
+    Lemma eval_word_to_solina a
+          (Hmw : 0 < machine_wordsize)
+          (Hn : (1 < n)%nat)
+          (Ha : 0 <= a < 2 ^ machine_wordsize) :
+      eval (word_to_solina a) mod (s - Associational.eval c) =
+      Z.twos_complement machine_wordsize a mod (s - Associational.eval c).
+    Proof.
+      unfold word_to_solina. 
+      rewrite twos_complement_neg_spec.
+      rewrite !unfold_Let_In.
+      rewrite select_eq with (n:=n).
+
+      unfold Z.twos_complement.
+      rewrite Z.twos_complement_cond_equiv.
+
+      destruct (Z.testbit a (machine_wordsize - 1)) eqn:E. cbn -[Partition.partition oppmod].
+
+      rewrite eval_carrymod.
+      rewrite eval_oppmod.
+      push_Zmod.
+      rewrite eval_encodemod.
+      pull_Zmod.
+      rewrite twos_complement_opp_correct.
+
+      destruct (dec (a = 0)). subst. rewrite Z.bits_0 in E. inversion E.
+      pose proof Z.mod_pos_bound a (2 ^ machine_wordsize) ltac:(lia). 
+      pose proof Z.mod_pos_bound (- a) (2 ^ machine_wordsize) ltac:(lia). 
+
+      rewrite Z.mod_opp_small.
+      rewrite Z.mod_opp_small.
+      replace (a mod 2 ^ machine_wordsize - 2 ^ machine_wordsize) with (- (2 ^ machine_wordsize - (a mod 2 ^ machine_wordsize))) by lia.
+      rewrite Z.mod_opp_small.
+      rewrite Z.mod_small. lia. lia.
+      pose proof Z.mod_pos_bound a (2 ^ machine_wordsize) ltac:(lia). lia.  lia.
+
+      rewrite (Z.mod_opp_small a). lia. lia. 
+      
+      all: try lia; try assumption; unfold encodemod, oppmod; auto with distr_length. 
+
+      simpl.
+      pose proof wprops limbwidth_num limbwidth_den limbwidth_good. destruct H.
+      rewrite eval_encode. rewrite (Z.mod_small _ (2 ^ _)).
+      
+      reflexivity.
+      all: auto.
+
+      intros. unfold weight. apply Z.pow_nonzero. lia. 
+      apply Z.opp_nonneg_nonpos.
+      apply Z.div_le_upper_bound. lia. nia. intros. specialize (weight_divides i). lia.
+
+      unfold carrymod; auto with distr_length.
+    Qed.
+    
+    Definition outer_loop_body f g (v r : list Z) :=
+      let '(_,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_divstep_aux machine_wordsize data) (1,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+      dlet f2 := word_sat_mul machine_wordsize sat_limbs u1 f in
+      dlet f3 := word_sat_mul machine_wordsize sat_limbs v1 g in
+      dlet g2 := word_sat_mul machine_wordsize sat_limbs q1 f in
+      dlet g3 := word_sat_mul machine_wordsize sat_limbs r1 g in
+      dlet f4 := BYInv.sat_add machine_wordsize word_sat_mul_limbs f2 f3 in
+      dlet g4 := BYInv.sat_add machine_wordsize word_sat_mul_limbs g2 g3 in
+      dlet f5 := sat_arithmetic_shiftr machine_wordsize word_sat_mul_limbs f4 (machine_wordsize - 2) in
+      dlet g5 := sat_arithmetic_shiftr machine_wordsize word_sat_mul_limbs g4 (machine_wordsize - 2) in
+      dlet f6 := firstn sat_limbs f5 in
+      dlet g6 := firstn sat_limbs g5 in
+      dlet u2 := word_to_solina u1 in
+      dlet v02 := word_to_solina v1 in
+      dlet q2 := word_to_solina q1 in
+      dlet r02 := word_to_solina r1 in
+      dlet v2 := carry_mulmod limbwidth_num limbwidth_den s c n idxs u2 v in
+      dlet v3 := carry_mulmod limbwidth_num limbwidth_den s c n idxs v02 r in
+      dlet r2 := carry_mulmod limbwidth_num limbwidth_den s c n idxs q2 v in
+      dlet r3 := carry_mulmod limbwidth_num limbwidth_den s c n idxs r02 r in
+      dlet v4 := addmod limbwidth_num limbwidth_den n v2 v3 in
+      dlet v5 := carrymod limbwidth_num limbwidth_den s c n idxs v4 in
+      dlet r4 := addmod limbwidth_num limbwidth_den n r2 r3 in
+      dlet r5 := carrymod limbwidth_num limbwidth_den s c n idxs r4 in
+      (f6, g6, v5, r5).
+
+  (** Correctness of outer loop body  *)
+  Theorem outer_loop_body_correct f g v r
+          (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
+          (n1 : (1 < n)%nat)
+          (mw1 : 2 < machine_wordsize)
+          (Hf : length f = sat_limbs)
+          (Hg : length g = sat_limbs)
+          (Hv : length v = n)
+          (Hr : length r = n)
+          (sat_limbs0 : (0 < sat_limbs)%nat)
+          (word_sat_mul_limbs_eq : (word_sat_mul_limbs = 1 + sat_limbs)%nat)
+          (overflow_f : - 2 ^ (machine_wordsize * sat_limbs - 2) <
+                        eval_twos_complement machine_wordsize sat_limbs f <
+                        2 ^ (machine_wordsize * sat_limbs - 2))
+          (overflow_g : - 2 ^ (machine_wordsize * sat_limbs - 2) <
+                        eval_twos_complement machine_wordsize sat_limbs g <
+                        2 ^ (machine_wordsize * sat_limbs - 2))
+          (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize)
+          (Hg2 : forall z, In z g -> 0 <= z < 2^machine_wordsize) :
+    let '(f1,g1,v1,r1) := outer_loop_body f g v r in
+    (eval_twos_complement machine_wordsize sat_limbs f1,
+     eval_twos_complement machine_wordsize sat_limbs g1,
+     eval v1 mod (s - Associational.eval c),
+     eval r1 mod (s - Associational.eval c))
+    =
+    let '(_,f1',g1',v1',r1') :=
+        divstep_full_iter (s - Associational.eval c) 1
+                          (eval_twos_complement machine_wordsize sat_limbs f)
+                          (eval_twos_complement machine_wordsize sat_limbs g)
+                          (eval v mod (s - Associational.eval c))
+                          (eval r mod (s - Associational.eval c))
+                          (Z.to_nat (machine_wordsize - 2)) in
+    (Z.twos_complement (machine_wordsize * sat_limbs) f1',
+     Z.twos_complement (machine_wordsize * sat_limbs) g1', v1', r1').
+    Proof.
+      pose proof (pow_ineq_Z (machine_wordsize - 1) ltac:(lia)).
+
+      assert (1 < 2 ^ machine_wordsize).
+      { apply Zpow_facts.Zpower_gt_1. lia. lia. }
+      assert (0 < 2 ^ (machine_wordsize - 1)).
+      { apply Z.pow_pos_nonneg. lia. lia. }
+      assert (0 < 2 ^ (machine_wordsize - 2)).
+      { apply Z.pow_pos_nonneg. lia. lia. }
+      assert (2 ^ (machine_wordsize - 2) * 2 = 2 ^ (machine_wordsize - 1)).
+      { rewrite Z.mul_comm, Z.pow_mul_base. apply f_equal2; lia. lia. }
+      assert (2 * (2 * (2 ^ (machine_wordsize * Z.of_nat sat_limbs - 2) * 2 ^ (machine_wordsize - 1))) = 2 ^ (machine_wordsize * (Z.of_nat (1 + sat_limbs)) - 1)).
+      { rewrite <- Zpower_exp, !Z.pow_mul_base. apply f_equal2; lia. nia. nia. nia. lia. }
+
+      unfold outer_loop_body.
+      epose proof twos_complement_word_full_divstep_iter_partially_correct (machine_wordsize) 1 (nth_default 0 f 0) (nth_default 0 g 0) 1 0 0 1 (Z.to_nat (machine_wordsize - 2)) 2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _.
+
+      epose proof twos_complement_word_full_divsteps_partial_bounds (machine_wordsize) 1 (nth_default 0 f 0) (nth_default 0 g 0) 1 0 0 1 (Z.to_nat (machine_wordsize - 2)) 2 _ _ _ _ _ _ _ _ _ _ _ _ _.
+
+      replace (Z.of_nat (Z.to_nat (machine_wordsize - 2))) with (machine_wordsize - 2) in * by lia.
+
+      epose proof jump_divstep_full
+            (s - Associational.eval c)
+            (eval_twos_complement machine_wordsize sat_limbs f)
+            (Z.twos_complement machine_wordsize (nth_default 0 f 0))
+            (eval_twos_complement machine_wordsize sat_limbs g)
+            (Z.twos_complement machine_wordsize (nth_default 0 g 0))
+            (eval v mod (s - Associational.eval c))
+            (eval r mod (s - Associational.eval c))
+            (Z.to_nat (machine_wordsize - 2)) _ _ _ _ _ _.
+
+      rewrite Z.twos_complement_one in *.
+      rewrite Z.twos_complement_zero in *.
+
+      rewrite <- fold_right_fold_left_lemma with (l:=(seq 0 (Z.to_nat (machine_wordsize - 2)))).
+
+      destruct (    fold_left (fun (i : Z * Z * Z * Z * Z * Z * Z) (_ : nat) => twos_complement_word_full_divstep_aux machine_wordsize i)
+                              (seq 0 (Z.to_nat (machine_wordsize - 2))) (1, nth_default 0 f 0, nth_default 0 g 0, 1, 0, 0, 1)) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E1 .
+
+      destruct (divstep_full_iter
+                  (s - Associational.eval c) 1
+                  (eval_twos_complement machine_wordsize sat_limbs f)
+                  (eval_twos_complement machine_wordsize sat_limbs g)
+                  (eval v mod (s - Associational.eval c))
+                  (eval r mod (s - Associational.eval c))
+                  (Z.to_nat (machine_wordsize - 2)))
+        as [[[[d1' f1'] g1'] v1'] r1'] eqn:E2.
+
+      destruct (divstep_spec_full'_iter
+                  1
+                  (Z.twos_complement machine_wordsize (nth_default 0 f 0))
+                  (Z.twos_complement machine_wordsize (nth_default 0 g 0))
+                  1 0 0 1 (Z.to_nat (machine_wordsize - 2)))
+        as [[[[[[d1'' f1''] g1''] u1''] v1''] q1''] r1''] eqn:E3.
+
+      rewrite !unfold_Let_In.
+
+      repeat match goal with
+             | [ |- (_, _) = (_, _) ] => apply f_equal2
+             end.
+
+      + unfold eval_twos_complement.
+        rewrite firstn_eval with (n:=word_sat_mul_limbs).
+        rewrite Z.twos_complement_mod.
+        rewrite <- Z.twos_complement_twos_complement_smaller_width with (m':=machine_wordsize * Z.of_nat word_sat_mul_limbs).
+        fold (eval_twos_complement machine_wordsize word_sat_mul_limbs (sat_arithmetic_shiftr machine_wordsize word_sat_mul_limbs
+                                                                                              (BYInv.sat_add machine_wordsize word_sat_mul_limbs (word_sat_mul machine_wordsize sat_limbs u1 f)
+                                                                                                             (word_sat_mul machine_wordsize sat_limbs v1 g)) (machine_wordsize - 2))).
+        rewrite eval_sat_arithmetic_shiftr.
+        unfold eval_twos_complement.
+        rewrite eval_sat_add.
+        rewrite Z.twos_complement_mod.
+        rewrite Z.twos_complement_add_full.
+
+        fold (eval_twos_complement machine_wordsize word_sat_mul_limbs (word_sat_mul machine_wordsize sat_limbs v1 g)).
+        fold (eval_twos_complement machine_wordsize word_sat_mul_limbs (word_sat_mul machine_wordsize sat_limbs u1 f)).
+        rewrite word_sat_mul_limbs_eq.
+        rewrite !word_sat_mul_correct.
+        inversion H7.
+        inversion H5.
+        replace (Z.of_nat (Z.to_nat (machine_wordsize - 2))) with (machine_wordsize - 2) by lia. reflexivity. lia. lia.
+
+        all: try assumption; try lia; try nia.
+
+        fold (eval_twos_complement machine_wordsize word_sat_mul_limbs (word_sat_mul machine_wordsize sat_limbs v1 g)).
+        fold (eval_twos_complement machine_wordsize word_sat_mul_limbs (word_sat_mul machine_wordsize sat_limbs u1 f)).
+        rewrite word_sat_mul_limbs_eq.
+        rewrite !word_sat_mul_correct.
+
+
+        pose proof Z.twos_complement_bounds.
+
+
+        nia. lia. lia. lia. lia. auto. lia. lia. lia. lia. auto.
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+
+        apply length_sat_add.  lia.
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+
+        apply sat_add_bounds. lia.
+
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+
+        apply sat_arithmetic_shiftr_length. lia.
+
+        apply length_sat_add.  lia.
+
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+
+        apply sat_arithmetic_shiftr_bounds. lia. lia. lia.
+        apply sat_add_bounds. lia.
+
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+      + unfold eval_twos_complement.
+        rewrite firstn_eval with (n:=word_sat_mul_limbs).
+        rewrite Z.twos_complement_mod.
+        rewrite <- Z.twos_complement_twos_complement_smaller_width with (m':=machine_wordsize * Z.of_nat word_sat_mul_limbs).
+        fold (eval_twos_complement machine_wordsize word_sat_mul_limbs
+                                   (sat_arithmetic_shiftr machine_wordsize word_sat_mul_limbs
+                                                          (BYInv.sat_add machine_wordsize word_sat_mul_limbs (word_sat_mul machine_wordsize sat_limbs q1 f)
+                                                                         (word_sat_mul machine_wordsize sat_limbs r1 g)) (machine_wordsize - 2))).
+        rewrite eval_sat_arithmetic_shiftr.
+        unfold eval_twos_complement.
+        rewrite eval_sat_add.
+        rewrite Z.twos_complement_mod.
+        rewrite Z.twos_complement_add_full.
+
+        fold (eval_twos_complement machine_wordsize word_sat_mul_limbs (word_sat_mul machine_wordsize sat_limbs q1 f)).
+        fold (eval_twos_complement machine_wordsize word_sat_mul_limbs (word_sat_mul machine_wordsize sat_limbs r1 g)).
+        rewrite word_sat_mul_limbs_eq.
+        rewrite !word_sat_mul_correct.
+        inversion H7.
+        inversion H5.
+        replace (Z.of_nat (Z.to_nat (machine_wordsize - 2))) with (machine_wordsize - 2) by lia. reflexivity. lia. lia.
+
+        all: try assumption; try lia; try nia.
+
+        fold (eval_twos_complement machine_wordsize word_sat_mul_limbs (word_sat_mul machine_wordsize sat_limbs q1 f)).
+        fold (eval_twos_complement machine_wordsize word_sat_mul_limbs (word_sat_mul machine_wordsize sat_limbs r1 g)).
+        rewrite word_sat_mul_limbs_eq.
+        rewrite !word_sat_mul_correct.
+
+
+        pose proof Z.twos_complement_bounds.
+
+
+        nia. lia. lia. lia. lia. auto. lia. lia. lia. lia. auto.
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+
+        apply length_sat_add.  lia.
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+
+        apply sat_add_bounds. lia.
+
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+
+        apply sat_arithmetic_shiftr_length. lia.
+
+        apply length_sat_add.  lia.
+
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+
+        apply sat_arithmetic_shiftr_bounds. lia. lia. lia.
+        apply sat_add_bounds. lia.
+
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+        rewrite word_sat_mul_limbs_eq.
+        apply word_sat_mul_length. lia. lia. lia. lia.
+      +
+
+        rewrite eval_carrymod.
+        rewrite eval_addmod.
+        push_Zmod. 
+        rewrite !eval_carry_mulmod.
+        push_Zmod.
+        rewrite !eval_word_to_solina.
+        
+        inversion H7. inversion H5.
+
+        push_Zmod; pull_Zmod. reflexivity.
+        all: try lia; auto.
+        apply word_to_solina_length.
+        apply word_to_solina_length.
+
+        unfold carry_mulmod, mulmod; auto with distr_length.
+        unfold carry_mulmod, mulmod; auto with distr_length.
+        unfold addmod, carry_mulmod, mulmod; auto with distr_length.
+      +
+        rewrite eval_carrymod.
+        rewrite eval_addmod.
+        push_Zmod. 
+        rewrite !eval_carry_mulmod.
+        push_Zmod.
+        rewrite !eval_word_to_solina.
+        
+        inversion H7. inversion H5.
+
+        push_Zmod; pull_Zmod. reflexivity.
+        all: try lia; auto.
+        apply word_to_solina_length.
+        apply word_to_solina_length.
+
+        unfold carry_mulmod, mulmod; auto with distr_length.
+        unfold carry_mulmod, mulmod; auto with distr_length.
+        unfold addmod, carry_mulmod, mulmod; auto with distr_length.
+     + intros. reflexivity.
+     + reflexivity.
+     + lia.
+     + lia.
+
+
+Unshelve.
+      rewrite eval_nth_default_0 with (m:=machine_wordsize) (n:=sat_limbs).
+      unfold eval_twos_complement in fodd.
+      rewrite Z.twos_complement_odd in fodd.
+      rewrite odd_mod2m. assumption.
+
+      lia. nia. lia. assumption.  assumption.
+      replace (Z.of_nat (Z.to_nat (machine_wordsize - 2))) with (machine_wordsize - 2) in * by lia.
+
+      lia. lia. lia. rewrite Z.twos_complement_one. lia. lia.
+      rewrite Z.twos_complement_one. lia. lia.
+      rewrite Z.twos_complement_zero. lia. lia.
+      rewrite Z.twos_complement_zero. lia. lia.
+      rewrite Z.twos_complement_one. lia. lia.
+
+      lia. lia. lia. lia.
+      apply Hf2.
+      destruct f. simpl in *. lia. simpl. left. cbn. reflexivity.
+      apply Hg2.
+      destruct g. simpl in *. lia. simpl. left. cbn. reflexivity.
+
+      lia.
+      replace (Z.of_nat (Z.to_nat (machine_wordsize - 2))) with (machine_wordsize - 2) in * by lia.
+      lia. lia. rewrite eval_nth_default_0 with (n:=sat_limbs) (m:=machine_wordsize).
+      rewrite odd_mod2m. unfold eval_twos_complement in fodd.
+      rewrite Z.twos_complement_odd in fodd. assumption. nia. lia. lia. assumption. assumption.
+      lia. lia. lia. lia.
+      replace (Z.of_nat (Z.to_nat (machine_wordsize - 2))) with (machine_wordsize - 2) in * by lia.
+      rewrite Z.twos_complement_one. lia. lia.
+
+      rewrite Z.twos_complement_one. lia. lia.
+      rewrite Z.twos_complement_zero. lia. lia.
+      rewrite Z.twos_complement_zero. lia. lia.
+      rewrite Z.twos_complement_one. lia. lia.
+
+      assumption. lia.
+      apply Z.mod_pos_bound. lia.
+      apply Z.mod_pos_bound. lia.
+
+      unfold eval_twos_complement.
+      rewrite eval_nth_default_0 with (n:=sat_limbs) (m:=machine_wordsize).
+
+      rewrite Z.twos_complement_mod.
+
+      rewrite !Z.twos_complement_mod_smaller_pow. reflexivity. lia. nia. lia. lia. assumption. assumption.
+
+      unfold eval_twos_complement.
+      rewrite eval_nth_default_0 with (n:=sat_limbs) (m:=machine_wordsize).
+
+      rewrite Z.twos_complement_mod.
+
+      rewrite !Z.twos_complement_mod_smaller_pow. reflexivity. lia. nia. lia. lia. assumption. assumption. Qed.
+  End __.  
+End UnsaturatedSolinas.
