@@ -2639,7 +2639,7 @@ static void fiat_p521_divstep(uint64_t* out1, uint64_t out2[10], uint64_t out3[1
  * Output Bounds:
  *   out1: [[0x0 ~> 0x400000000000000], [0x0 ~> 0x400000000000000], [0x0 ~> 0x400000000000000], [0x0 ~> 0x400000000000000], [0x0 ~> 0x400000000000000], [0x0 ~> 0x400000000000000], [0x0 ~> 0x400000000000000], [0x0 ~> 0x400000000000000], [0x0 ~> 0x200000000000000]]
  */
-static void fiat_p521_divstep_precomp(fiat_p521_uint1 out1[9]) {
+static void fiat_p521_divstep_precomp(uint64_t out1[9]) {
   out1[0] = 0x0;
   out1[1] = 0x1;
   out1[2] = 0x0;
