@@ -69,7 +69,7 @@ int main() {
 
   int seed = time(0);
   srand(seed);
-  printf("%i\n", seed);
+  printf("seed: %i\n", seed);
 
   for (int j = 0; j < 10000; j++) {
     int i;
