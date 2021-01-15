@@ -160,7 +160,7 @@ JAVA_$(call JAVA_RENAME,$(1))_BITWIDTH:=$(4)
 JAVA_$(call JAVA_RENAME,$(1))_ARGS:=$(4) $(5)
 JAVA_$(call JAVA_RENAME,$(1))_FUNCTIONS:=$(6)
 
-BEDROCK2_$(1)_FUNCTIONS:=$(filter-out %msat %divstep %divstep_precomp, $(6))
+BEDROCK2_$(1)_FUNCTIONS:=$(filter-out %msat %divstep %divstep_precomp %twos_complement_word_full_divstep %asr_mw_sub2 %sat_add word_sat_mul %jumpdivstep_precomp %twos_complement_word_to_montgomery_no_encode %outer_loop_body %word_to_solina, $(6))
 
 endef
 
