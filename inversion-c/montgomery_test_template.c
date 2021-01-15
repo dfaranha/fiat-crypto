@@ -13,6 +13,56 @@
 #define FROM_MONTGOMERY MAKE_FN_NAME(CURVE_DESCRIPTION,_from_montgomery)
 #define TO_MONTGOMERY MAKE_FN_NAME(CURVE_DESCRIPTION,_to_montgomery)
 
+inline long long cpucycles(void) {
+  unsigned long long result;
+  asm volatile(".byte 15;.byte 49;shlq $32,%%rdx;orq %%rdx,%%rax"
+    : "=a" (result) ::  "%rdx");
+  return result;
+}
+
+long long t[64];
+WORD x[LIMBS];
+
+void bench(void) {
+  long long i,j;
+  
+  for (i = 0;i < 64;++i)
+    t[i] = cpucycles();
+  for (i = 63;i > 0;--i)
+    t[i] -= t[i-1];
+
+  printf("nothing");
+  for (i = 1;i < 64;++i)
+    printf(" %lld",t[i]);
+  printf("\n");
+
+  for (i = 0;i < 64;++i) {
+    t[i] = cpucycles();
+    inverse(x,x);
+  }
+  for (i = 63;i > 0;--i)
+    t[i] -= t[i-1];
+
+  printf("cycles");
+  for (i = 1;i < 64;++i)
+    printf(" %lld",t[i]);
+  printf("\n");
+
+  for (i = 1;i < 64;++i)
+    for (j = 1;j < i;++j)
+      if (t[i] < t[j]) {
+        long long ti = t[i];
+        t[i] = t[j];
+        t[j] = ti;
+      }
+  printf("sorted");
+  for (i = 1;i < 64;++i)
+    printf(" %lld",t[i]);
+  printf("\n");
+  
+  fflush(stdout);
+}
+
 int main() {
   WORD res[LIMBS], out[LIMBS], g[SAT_LIMBS], g1[LIMBS], g2[LIMBS];
   uint8_t a[BYTES];
@@ -52,5 +102,8 @@ int main() {
     }
   }
   printf("PASS\n");
+
+  bench();
+  
   return 0;
 }
