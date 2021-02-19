@@ -21,7 +21,7 @@
 #define INNER_LOOP (WORDSIZE - 2)
 #define OUTER_LOOP ((ITERATIONS / INNER_LOOP) + 1)
 
-void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
+void inverse(WORD out[LIMBS],  WORD g[SAT_LIMBS]) {
 
   WORD precomp[LIMBS];
 	PRECOMP(precomp);

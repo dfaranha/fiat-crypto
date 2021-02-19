@@ -21,7 +21,7 @@ inline long long cpucycles(void) {
 long long t[64];
 WORD x[LIMBS];
 
-void bench(void) {
+void bench(void (*inv)(WORD out[LIMBS], WORD in[LIMBS])) {
   long long i,j;
   
   for (i = 0;i < 64;++i)
@@ -36,7 +36,7 @@ void bench(void) {
 
   for (i = 0;i < 64;++i) {
     t[i] = cpucycles();
-    inverse(x,x);
+    inv(x,x);
   }
   for (i = 63;i > 0;--i)
     t[i] -= t[i-1];
@@ -57,6 +57,8 @@ void bench(void) {
   for (i = 1;i < 64;++i)
     printf(" %lld",t[i]);
   printf("\n");
+  printf("median");
+  printf(" %lld\n",t[32]);
   
   fflush(stdout);
 }
@@ -80,7 +82,7 @@ int main() {
     FROM_BYTES(g1,a);
 	
     inverse(out,g);
-		
+
     MUL(res,out,g1);
     TO_BYTES(a,res);
 		
@@ -96,10 +98,35 @@ int main() {
         return 1;
       }
     }
+
+#ifdef FLT_INVERSION
+    flt_inverse(out, g1);
+
+    MUL(res,out,g1);
+    TO_BYTES(a,res);
+		
+    if (a[0] != 1) {
+      printf("FAIL\n");
+      return 2;
+    }
+    for (i = 1; i < BYTES; i++) {
+      if (a[i] != 0) {
+        printf("FAIL\n");
+        return 1;
+      }
+    }
+#endif
+		
   }
   printf("PASS\n");
   
-  bench();
+  printf("\nbenchmarking inverse...\n");
+  bench(inverse);
+
+#ifdef FLT_INVERSION
+  printf("\nbenchmarking flt_inverse...\n");
+  bench(flt_inverse);
+#endif 
   
   return 0;
 }
