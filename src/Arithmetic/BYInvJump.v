@@ -107,7 +107,7 @@ Definition twos_complement_word_full_divstep_aux machine_wordsize (data : Z * Z 
   dlet q' := Z.zselect cond q (Z.twos_complement_opp machine_wordsize u) in
   dlet r' := Z.zselect cond r (Z.twos_complement_opp machine_wordsize v) in
   let g0 := g' mod 2 in
-  let d'' := (1 + d') mod 2^machine_wordsize in
+  let d'' := (2 + d') mod 2^machine_wordsize in
   dlet f'' := Z.zselect g0 0 f' in
   let g'' := Z.arithmetic_shiftr1 machine_wordsize ((g' + f'') mod 2^machine_wordsize) in
   dlet u''' := Z.zselect g0 0 u' in
@@ -121,9 +121,9 @@ Definition twos_complement_word_full_divstep machine_wordsize d f g u v q r :=
 
 Definition divstep_spec_full' d f g u v q r :=
   if (0 <? d) && Z.odd g
-  then (1 - d, g, (g - f) / 2,
+  then (2 - d, g, (g - f) / 2,
         2 * q, 2 * r, q - u, r - v)
-  else (1 + d, f, (g + (g mod 2) * f) / 2,
+  else (2 + d, f, (g + (g mod 2) * f) / 2,
         2 * u, 2 * v, q + (g mod 2) * u, r + (g mod 2) * v).
 
 Fixpoint divstep_spec_full'_iter d f g u v q r n :=
@@ -569,9 +569,9 @@ Theorem twos_complement_word_full_divstep_correct
         machine_wordsize d f g u v q r
         (fodd : Z.odd f = true)
         (mw1 : 2 < machine_wordsize)
-        (overflow_d : - 2 ^ (machine_wordsize - 1) + 1 <
+        (overflow_d : - 2 ^ (machine_wordsize - 1) + 2 <
                       Z.twos_complement machine_wordsize d <
-                      2 ^ (machine_wordsize - 1) - 1)
+                      2 ^ (machine_wordsize - 1) - 2)
         (overflow_f : - 2 ^ (machine_wordsize - 2) <
                       Z.twos_complement machine_wordsize f <
                       2 ^ (machine_wordsize - 2))
