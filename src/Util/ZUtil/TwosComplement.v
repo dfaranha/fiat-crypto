@@ -11,6 +11,7 @@ Require Import Crypto.Util.ZUtil.Notations.
 
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.
 Require Import Crypto.Util.ZUtil.Tactics.SolveTestbit.
+Require Import Crypto.Util.ZUtil.Tactics.SolveRange.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 
@@ -82,7 +83,7 @@ Module Z.
   Lemma twos_complement_one m (Hm : 1 < m) :
     Z.twos_complement m 1 = 1.
   Proof. Z.solve_using_testbit. Qed.
-
+  
   Lemma twos_complement_zero m (Hm : 0 < m):
     Z.twos_complement m 0 = 0.
   Proof. Z.solve_using_testbit. Qed.
@@ -162,4 +163,11 @@ Module Z.
     apply twos_complement_spec; try split; try lia; unfold Z.twos_complement.
     destruct_ltb (a mod 2 ^ m) (2 ^ (m - 1));
       destruct_ltb (b mod 2 ^ m) (2 ^ (m - 1)); repeat (push_Zmod; pull_Zmod; rewrite ?Z.sub_0_r); reflexivity. Qed.
+
+  Lemma twos_complement_two m (Hm : 2 < m) :
+    Z.twos_complement m 2 = 2.
+  Proof. replace 2 with (1 + 1) by reflexivity.
+         rewrite twos_complement_add_full, twos_complement_one; try lia. 
+         rewrite twos_complement_one; Z.solve_range.
+         cbn; replace 2 with (2 ^ 1) by reflexivity. apply Z.pow_lt_mono_r; lia. Qed.
 End Z.

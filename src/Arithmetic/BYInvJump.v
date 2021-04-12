@@ -119,23 +119,28 @@ Definition twos_complement_word_full_divstep_aux machine_wordsize (data : Z * Z 
 Definition twos_complement_word_full_divstep machine_wordsize d f g u v q r :=
   twos_complement_word_full_divstep_aux machine_wordsize (d, f, g, u, v, q, r).
 
-Definition divstep_spec_full' d f g u v q r :=
+Definition hddivstep_spec_full m d f g v r :=
+  if (0 <? d) && Z.odd g
+  then (2 - d, g, (g - f) / 2, 2 * r mod m, (r - v) mod m)
+  else (2 + d, f, (g + (g mod 2) * f) / 2, 2 * v mod m, (r + (g mod 2) * v) mod m).
+
+Definition hddivstep_spec_full' d f g u v q r :=
   if (0 <? d) && Z.odd g
   then (2 - d, g, (g - f) / 2,
         2 * q, 2 * r, q - u, r - v)
   else (2 + d, f, (g + (g mod 2) * f) / 2,
         2 * u, 2 * v, q + (g mod 2) * u, r + (g mod 2) * v).
 
-Fixpoint divstep_spec_full'_iter d f g u v q r n :=
+Fixpoint hddivstep_spec_full'_iter d f g u v q r n :=
   match n with
   | 0%nat => (d, f, g, u, v, q, r)
-  | S n => let '(d, f, g, u, v, q, r) := divstep_spec_full'_iter d f g u v q r n in divstep_spec_full' d f g u v q r
+  | S n => let '(d, f, g, u, v, q, r) := hddivstep_spec_full'_iter d f g u v q r n in hddivstep_spec_full' d f g u v q r
   end.
 
-Fixpoint divstep_full_iter m d f g v r n :=
+Fixpoint hddivstep_full_iter m d f g v r n :=
   match n with
   | 0%nat => (d, f, g, v, r)
-  | S n => let '(d, f, g, v, r) := divstep_full_iter m d f g v r n in divstep_spec_full m d f g v r
+  | S n => let '(d, f, g, v, r) := hddivstep_full_iter m d f g v r n in hddivstep_spec_full m d f g v r
   end.
 
 (**Brief section on twos_complement_neg (move at some point)  *)
@@ -601,13 +606,13 @@ Theorem twos_complement_word_full_divstep_correct
    Z.twos_complement machine_wordsize v1,
    Z.twos_complement machine_wordsize q1,
    Z.twos_complement machine_wordsize r1) =
-  divstep_spec_full' (Z.twos_complement machine_wordsize d)
-                     (Z.twos_complement machine_wordsize f)
-                     (Z.twos_complement machine_wordsize g)
-                     (Z.twos_complement machine_wordsize u)
-                     (Z.twos_complement machine_wordsize v)
-                     (Z.twos_complement machine_wordsize q)
-                     (Z.twos_complement machine_wordsize r).
+  hddivstep_spec_full' (Z.twos_complement machine_wordsize d)
+                       (Z.twos_complement machine_wordsize f)
+                       (Z.twos_complement machine_wordsize g)
+                       (Z.twos_complement machine_wordsize u)
+                       (Z.twos_complement machine_wordsize v)
+                       (Z.twos_complement machine_wordsize q)
+                       (Z.twos_complement machine_wordsize r).
 Proof.
   assert (2 * 2 ^ (machine_wordsize - 2) = 2 ^ (machine_wordsize - 1)) by
       (rewrite Z.pow_mul_base by lia; apply f_equal2; lia).
@@ -615,7 +620,7 @@ Proof.
       (apply Z.pow_lt_mono_r; lia).
   assert (2 <= 2 ^ (machine_wordsize - 2)) by
       (replace 2 with (2 ^ 1) by lia; apply Z.pow_le_mono_r; lia).
-  unfold divstep_spec_full'; cbn -[Z.mul Z.add].
+  unfold hddivstep_spec_full'; cbn -[Z.mul Z.add].
   rewrite !Zselect.Z.zselect_correct.
   rewrite !twos_complement_pos_spec, Zmod_odd, Z.twos_complement_odd by lia.
   rewrite Z.twos_complement_mod2, (Zmod_odd g) by lia.
@@ -628,7 +633,7 @@ Proof.
   all: (repeat apply f_equal2;
         repeat rewrite 1?Z.twos_complement_mod, 1?Z.twos_complement_add_full, 1?Z.twos_complement_one,
         1?Z.arithmetic_shiftr1_spec, 1?twos_complement_opp_spec, 1?Z.twos_complement_zero;
-        rewrite ?Z.twos_complement_one, ?twos_complement_opp_spec;
+        rewrite ?Z.twos_complement_one, ?Z.twos_complement_two, ?twos_complement_opp_spec;
         try apply Z.mod_pos_bound; try apply f_equal2; lia). Qed.
 
 Definition twos_complement_word_full_divsteps machine_wordsize d f g u v q r n :=
@@ -636,16 +641,16 @@ Definition twos_complement_word_full_divsteps machine_wordsize d f g u v q r n :
 
 Lemma twos_complement_word_full_divsteps_d_bound
       machine_wordsize d f g u v q r n K
-      (Kpos : 0 <= K < 2 ^ (machine_wordsize - 1) - (Z.of_nat n))
-      (mw1 : 1 < machine_wordsize)
+      (Kpos : 0 <= K < 2 ^ (machine_wordsize - 1) - 2 * (Z.of_nat n))
+      (mw1 : 2 < machine_wordsize)
       (overflow_d : - K <
                     Z.twos_complement machine_wordsize d <
                     K) :
   let '(d1,_,_,_,_,_,_) :=
       fold_left (fun data i => twos_complement_word_full_divstep_aux machine_wordsize data) (seq 0 n) (d,f,g,u,v,q,r) in
-  - K - Z.of_nat n <
+  - K - 2 * Z.of_nat n <
   Z.twos_complement machine_wordsize d1 <
-  K + Z.of_nat n.
+  K + 2 * Z.of_nat n.
 Proof.
   induction n; intros.
   - rewrite Z.add_0_r, Z.sub_0_r in *; cbn. assumption.
@@ -660,8 +665,8 @@ Proof.
     rewrite Zmod_odd.
     destruct (0 <? Z.twos_complement machine_wordsize d1);
       destruct (Z.odd g1) eqn:g1odd; cbn -[Z.mul Z.add oppmod]; try assumption;
-        rewrite ?Z.twos_complement_mod, ?Z.twos_complement_add_full, ?twos_complement_opp_spec, ?Z.twos_complement_one; try lia;
-          rewrite ?Z.twos_complement_mod, ?Z.twos_complement_add_full, ?twos_complement_opp_spec, ?Z.twos_complement_one; try lia.
+        rewrite ?Z.twos_complement_mod, ?Z.twos_complement_add_full, ?twos_complement_opp_spec, ?Z.twos_complement_one, ?Z.twos_complement_two; try lia;
+          rewrite ?Z.twos_complement_mod, ?Z.twos_complement_add_full, ?twos_complement_opp_spec, ?Z.twos_complement_one, ?Z.twos_complement_two; try lia.
     lia. lia. Qed.
 
 Lemma twos_complement_word_full_divsteps_f_odd
@@ -687,11 +692,11 @@ Lemma twos_complement_word_full_divsteps_bounds
       machine_wordsize d f g u v q r n K
       (HK : 0 < K)
       (HK2 : 2 ^ Z.of_nat n * K <= 2 ^ (machine_wordsize - 1))
-      (mw1 : 1 < machine_wordsize)
+      (mw1 : 2 < machine_wordsize)
       (fodd : Z.odd f = true)
-      (overflow_d : - (2 ^ (machine_wordsize - 1) - 1 - Z.of_nat n) <
+      (overflow_d : - (2 ^ (machine_wordsize - 1) - 1 - 2 * Z.of_nat n) <
                     Z.twos_complement machine_wordsize d <
-                    2 ^ (machine_wordsize - 1) - 1 - Z.of_nat n)
+                    2 ^ (machine_wordsize - 1) - 1 - 2 * Z.of_nat n)
       (overflow_f : - 2 ^ (machine_wordsize - 2) <
                     Z.twos_complement machine_wordsize f <
                     2 ^ (machine_wordsize - 2))
@@ -797,15 +802,15 @@ Lemma twos_complement_word_full_divsteps_partial_bounds
       machine_wordsize d f g u v q r n K
       (HK : 0 < K)
       (HK2 : 2 ^ Z.of_nat n * K <= 2 ^ (machine_wordsize - 1))
-      (mw1 : 1 < machine_wordsize)
+      (mw1 : 2 < machine_wordsize)
       (fodd : Z.odd f = true)
       (u_pos : 0 <= u < 2 ^ machine_wordsize)
       (v_pos : 0 <= v < 2 ^ machine_wordsize)
       (q_pos : 0 <= q < 2 ^ machine_wordsize)
       (r_pos : 0 <= r < 2 ^ machine_wordsize)
-      (overflow_d : - (2 ^ (machine_wordsize - 1) - 1 - Z.of_nat n) <
+      (overflow_d : - (2 ^ (machine_wordsize - 1) - 1 - 2 * Z.of_nat n) <
                     Z.twos_complement machine_wordsize d <
-                    2 ^ (machine_wordsize - 1) - 1 - Z.of_nat n)
+                    2 ^ (machine_wordsize - 1) - 1 - 2 * Z.of_nat n)
       (overflow_u : - K <
                     Z.twos_complement machine_wordsize u <
                     K)
@@ -898,11 +903,11 @@ Lemma twos_complement_word_full_divsteps_partial_bounds2
       machine_wordsize d f g u v q r n K
       (HK : 0 < K)
       (HK2 : 2 ^ Z.of_nat n * K <= 2 ^ (machine_wordsize - 1))
-      (mw1 : 1 < machine_wordsize)
+      (mw1 : 2 < machine_wordsize)
       (fodd : Z.odd f = true)
-      (overflow_d : - (2 ^ (machine_wordsize - 1) - 1 - Z.of_nat n) <
+      (overflow_d : - (2 ^ (machine_wordsize - 1) - 1 - 2 * Z.of_nat n) <
                     Z.twos_complement machine_wordsize d <
-                    2 ^ (machine_wordsize - 1) - 1 - Z.of_nat n)
+                    2 ^ (machine_wordsize - 1) - 1 - 2 * Z.of_nat n)
       (overflow_u : - K <
                     Z.twos_complement machine_wordsize u <
                     K)
@@ -992,9 +997,9 @@ Theorem twos_complement_word_full_divstep_iter_correct
         (fodd : Z.odd f = true)
         (HK : 2 ^ Z.of_nat n * K <= 2 ^ (machine_wordsize - 1))
         (mw1 : 2 < machine_wordsize)
-        (overflow_d : - (2 ^ (machine_wordsize - 1) - 1 - Z.of_nat n) <
+        (overflow_d : - (2 ^ (machine_wordsize - 1) - 1 - 2 * Z.of_nat n) <
                       Z.twos_complement machine_wordsize d <
-                      2 ^ (machine_wordsize - 1) - 1 - Z.of_nat n)
+                      2 ^ (machine_wordsize - 1) - 1 - 2 * Z.of_nat n)
         (overflow_f : - 2 ^ (machine_wordsize - 2) <
                       Z.twos_complement machine_wordsize f <
                       2 ^ (machine_wordsize - 2))
@@ -1024,13 +1029,13 @@ Theorem twos_complement_word_full_divstep_iter_correct
    Z.twos_complement machine_wordsize v1,
    Z.twos_complement machine_wordsize q1,
    Z.twos_complement machine_wordsize r1) =
-  divstep_spec_full'_iter (Z.twos_complement machine_wordsize d)
-                          (Z.twos_complement machine_wordsize f)
-                          (Z.twos_complement machine_wordsize g)
-                          (Z.twos_complement machine_wordsize u)
-                          (Z.twos_complement machine_wordsize v)
-                          (Z.twos_complement machine_wordsize q)
-                          (Z.twos_complement machine_wordsize r) n.
+  hddivstep_spec_full'_iter (Z.twos_complement machine_wordsize d)
+                            (Z.twos_complement machine_wordsize f)
+                            (Z.twos_complement machine_wordsize g)
+                            (Z.twos_complement machine_wordsize u)
+                            (Z.twos_complement machine_wordsize v)
+                            (Z.twos_complement machine_wordsize q)
+                            (Z.twos_complement machine_wordsize r) n.
 Proof.
   assert (0 < 2 ^ machine_wordsize) by (apply Z.pow_pos_nonneg; lia).
   assert (2 * 2 ^ (machine_wordsize - 2) = 2 ^ (machine_wordsize - 1)) by
@@ -1052,7 +1057,7 @@ Proof.
     destruct (fold_left (fun (data : Z * Z * Z * Z * Z * Z * Z) (_ : nat)  => twos_complement_word_full_divstep_aux machine_wordsize data) _ _) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E.
     rewrite <- IHn.
     cbn -[Z.mul Z.add].
-    unfold divstep_spec_full'. rewrite !Zselect.Z.zselect_correct.
+    unfold hddivstep_spec_full'. rewrite !Zselect.Z.zselect_correct.
     rewrite Z.twos_complement_odd.
     rewrite twos_complement_pos_spec.
     rewrite Zmod_odd.
@@ -1064,9 +1069,9 @@ Proof.
       * rewrite Z.twos_complement_mod.
         rewrite Z.twos_complement_add_full.
         rewrite twos_complement_opp_spec.
-        rewrite Z.twos_complement_one. lia. lia. lia. lia. lia.
+        rewrite Z.twos_complement_two. lia. lia. lia. lia. lia.
         rewrite twos_complement_opp_spec.
-        rewrite Z.twos_complement_one. lia. lia. lia. lia. lia.
+        rewrite Z.twos_complement_two. lia. lia. lia. lia. lia.
       * reflexivity.
       * reflexivity.
       * rewrite Z.arithmetic_shiftr1_spec by (try apply Z.mod_pos_bound; lia).
@@ -1093,9 +1098,9 @@ Proof.
              end.
       * rewrite Z.twos_complement_mod.
         rewrite Z.twos_complement_add_full.
-        rewrite Z.twos_complement_one.
+        rewrite Z.twos_complement_two.
         lia. lia. lia.
-        rewrite Z.twos_complement_one.
+        rewrite Z.twos_complement_two.
         lia. lia. lia.
       * reflexivity.
       * rewrite Z.arithmetic_shiftr1_spec by (try apply Z.mod_pos_bound; lia).
@@ -1115,9 +1120,9 @@ Proof.
              end.
       * rewrite Z.twos_complement_mod.
         rewrite Z.twos_complement_add_full.
-        rewrite Z.twos_complement_one.
+        rewrite Z.twos_complement_two.
         lia. lia. lia.
-        rewrite Z.twos_complement_one.
+        rewrite Z.twos_complement_two.
         lia. lia. lia.
       * reflexivity.
       * rewrite Z.arithmetic_shiftr1_spec by (try apply Z.mod_pos_bound; lia).
@@ -1140,9 +1145,9 @@ Proof.
              end.
       * rewrite Z.twos_complement_mod.
         rewrite Z.twos_complement_add_full.
-        rewrite Z.twos_complement_one.
+        rewrite Z.twos_complement_two.
         lia. lia. lia.
-        rewrite Z.twos_complement_one.
+        rewrite Z.twos_complement_two.
         lia. lia. lia.
       * reflexivity.
       * rewrite Z.arithmetic_shiftr1_spec by (try apply Z.mod_pos_bound; lia).
@@ -1171,9 +1176,9 @@ Theorem twos_complement_word_full_divstep_iter_partially_correct
         (HK : 2 ^ Z.of_nat n * K <= 2 ^ (machine_wordsize - 1))
         (mw1 : 2 < machine_wordsize)
         (nmw : n < machine_wordsize)
-        (overflow_d : - (2 ^ (machine_wordsize - 1) - 1 - Z.of_nat n) <
+        (overflow_d : - (2 ^ (machine_wordsize - 1) - 1 - 2 * Z.of_nat n) <
                       Z.twos_complement machine_wordsize d <
-                      2 ^ (machine_wordsize - 1) - 1 - Z.of_nat n)
+                      2 ^ (machine_wordsize - 1) - 1 - 2 * Z.of_nat n)
         (overflow_u : - K <
                       Z.twos_complement machine_wordsize u <
                       K)
@@ -1201,13 +1206,13 @@ Theorem twos_complement_word_full_divstep_iter_partially_correct
    Z.twos_complement machine_wordsize v1,
    Z.twos_complement machine_wordsize q1,
    Z.twos_complement machine_wordsize r1) =
-  let '(d1',f1',g1',u1',v1',q1',r1') := divstep_spec_full'_iter (Z.twos_complement machine_wordsize d)
-                                                         (Z.twos_complement machine_wordsize f)
-                                                         (Z.twos_complement machine_wordsize g)
-                                                         (Z.twos_complement machine_wordsize u)
-                                                         (Z.twos_complement machine_wordsize v)
-                                                         (Z.twos_complement machine_wordsize q)
-                                                         (Z.twos_complement machine_wordsize r) n in
+  let '(d1',f1',g1',u1',v1',q1',r1') := hddivstep_spec_full'_iter (Z.twos_complement machine_wordsize d)
+                                                                  (Z.twos_complement machine_wordsize f)
+                                                                  (Z.twos_complement machine_wordsize g)
+                                                                  (Z.twos_complement machine_wordsize u)
+                                                                  (Z.twos_complement machine_wordsize v)
+                                                                  (Z.twos_complement machine_wordsize q)
+                                                                  (Z.twos_complement machine_wordsize r) n in
   (d1', f1' mod 2 ^ (machine_wordsize - Z.of_nat n), g1' mod 2 ^ (machine_wordsize - Z.of_nat n), u1',v1',q1',r1').
 Proof.
   assert (0 < 2 ^ machine_wordsize) by (apply Z.pow_pos_nonneg; lia).
@@ -1227,7 +1232,7 @@ Proof.
 
     rewrite seq_snoc, fold_left_app. cbn -[Z.mul Z.add].
     destruct (fold_left (fun (data : Z * Z * Z * Z * Z * Z * Z) (_ : nat)  => twos_complement_word_full_divstep_aux machine_wordsize data) _ _) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E1.
-    destruct (divstep_spec_full'_iter (Z.twos_complement machine_wordsize d) (Z.twos_complement machine_wordsize f)
+    destruct (hddivstep_spec_full'_iter (Z.twos_complement machine_wordsize d) (Z.twos_complement machine_wordsize f)
         (Z.twos_complement machine_wordsize g) (Z.twos_complement machine_wordsize u) (Z.twos_complement machine_wordsize v)
         (Z.twos_complement machine_wordsize q) (Z.twos_complement machine_wordsize r) n) as [[[[[[d1' f1'] g1'] u1'] v1'] q1'] r1'] eqn:E2 .
 
@@ -1242,7 +1247,7 @@ Proof.
     rewrite Z.twos_complement_mod_smaller_pow in H8 by lia.
 
     cbn -[Z.mul Z.add].
-    unfold divstep_spec_full'. rewrite !Zselect.Z.zselect_correct.
+    unfold hddivstep_spec_full'. rewrite !Zselect.Z.zselect_correct.
     rewrite twos_complement_pos_spec.
     rewrite Zmod_odd.
 
@@ -1262,9 +1267,9 @@ Proof.
       * rewrite Z.twos_complement_mod.
         rewrite Z.twos_complement_add_full.
         rewrite twos_complement_opp_spec.
-        rewrite Z.twos_complement_one. lia. lia. lia. lia. lia.
+        rewrite Z.twos_complement_two. lia. lia. lia. lia. lia.
         rewrite twos_complement_opp_spec.
-        rewrite Z.twos_complement_one. lia. lia. lia. lia. lia.
+        rewrite Z.twos_complement_two. lia. lia. lia. lia. lia.
       *
         rewrite Z.twos_complement_mod_smaller_pow.
         rewrite <- Z.mod_pow_same_base_smaller with (n:=(machine_wordsize - Z.of_nat n)).
@@ -1305,9 +1310,9 @@ Proof.
              end.
       * rewrite Z.twos_complement_mod.
         rewrite Z.twos_complement_add_full.
-        rewrite Z.twos_complement_one.
+        rewrite Z.twos_complement_two.
         lia. lia. lia.
-        rewrite Z.twos_complement_one.
+        rewrite Z.twos_complement_two.
         lia. lia. lia.
       *
         rewrite Z.twos_complement_mod_smaller_pow.
@@ -1338,9 +1343,9 @@ Proof.
              end.
       * rewrite Z.twos_complement_mod.
         rewrite Z.twos_complement_add_full.
-        rewrite Z.twos_complement_one.
+        rewrite Z.twos_complement_two.
         lia. lia. lia.
-        rewrite Z.twos_complement_one.
+        rewrite Z.twos_complement_two.
         lia. lia. lia.
       *
         rewrite Z.twos_complement_mod_smaller_pow.
@@ -1375,9 +1380,9 @@ Proof.
              end.
       * rewrite Z.twos_complement_mod.
         rewrite Z.twos_complement_add_full.
-        rewrite Z.twos_complement_one.
+        rewrite Z.twos_complement_two.
         lia. lia. lia.
-        rewrite Z.twos_complement_one.
+        rewrite Z.twos_complement_two.
         lia. lia. lia.
       *
         rewrite Z.twos_complement_mod_smaller_pow.
@@ -1408,52 +1413,52 @@ Proof.
       all: try lia; try assumption.  Qed.
 
 
-Lemma divstep_full_iter_full'_iter m d f g u2 v1 v2 q2 r1 r2 n :
+Lemma hddivstep_full_iter_full'_iter m d f g u2 v1 v2 q2 r1 r2 n :
   let '(d1,f1,g1,_,_) :=
-      divstep_full_iter m d f g v1 r1 n in
+      hddivstep_full_iter m d f g v1 r1 n in
   (d1,f1,g1)
-  = let '(d2,f2,g2,_,_,_,_) := divstep_spec_full'_iter d f g u2 v2 q2 r2 n in
+  = let '(d2,f2,g2,_,_,_,_) := hddivstep_spec_full'_iter d f g u2 v2 q2 r2 n in
     (d2,f2,g2).
 Proof.
   induction n.
   - reflexivity.
   - simpl.
-    destruct (divstep_full_iter m d f g v1 r1 n) as [[[[?]?]?]?].
-    destruct (divstep_spec_full'_iter d f g u2 v2 q2 r2 n) as [[[[[[?]?]?]?]?]?].
+    destruct (hddivstep_full_iter m d f g v1 r1 n) as [[[[?]?]?]?].
+    destruct (hddivstep_spec_full'_iter d f g u2 v2 q2 r2 n) as [[[[[[?]?]?]?]?]?].
     inversion IHn.
-    unfold divstep_spec_full'.
-    unfold divstep_spec_full.
-    destruct (0 <? z4); destruct (Z.odd z6); cbn -[Z.add Z.mul Z.div Z.sub]; reflexivity.  Qed.
+    unfold hddivstep_spec_full'.
+    unfold hddivstep_spec_full.
+    destruct (0 <? z4); destruct (Z.odd z6); cbn -[Z.add Z.mul Z.div Z.sub]; reflexivity. Qed.
 
-Lemma divstep_full_iter_f_odd m f g v r n
+Lemma hddivstep_full_iter_f_odd m f g v r n
   (fodd : Z.odd f = true) :
-  let '(_,f,_,_,_) := divstep_full_iter m 1 f g v r n in Z.odd f = true.
+  let '(_,f,_,_,_) := hddivstep_full_iter m 1 f g v r n in Z.odd f = true.
 Proof.
   induction n.
   - assumption.
-  - simpl. unfold divstep_spec_full.
-    destruct (divstep_full_iter m 1 f g v r n) as [[[[d1 f1]g1]v1]r1].
+  - simpl. unfold hddivstep_spec_full.
+    destruct (hddivstep_full_iter m 1 f g v r n) as [[[[d1 f1]g1]v1]r1].
     destruct (0 <? d1); destruct (Z.odd g1) eqn:E; assumption. Qed.
 
-Lemma divstep_full'_iter_f_odd d f g u v q r n
+Lemma hddivstep_full'_iter_f_odd d f g u v q r n
   (fodd : Z.odd f = true) :
-  let '(_,f,_,_,_,_,_) := divstep_spec_full'_iter d f g u v q r n in Z.odd f = true.
+  let '(_,f,_,_,_,_,_) := hddivstep_spec_full'_iter d f g u v q r n in Z.odd f = true.
 Proof.
   induction n.
   - assumption.
-  - simpl. unfold divstep_spec_full'.
-    destruct (divstep_spec_full'_iter d f g u v q r n) as [[[[[[d1 f1]g1]u1]v1]q1]r1].
+  - simpl. unfold hddivstep_spec_full'.
+    destruct (hddivstep_spec_full'_iter d f g u v q r n) as [[[[[[d1 f1]g1]u1]v1]q1]r1].
     destruct (0 <? d1); destruct (Z.odd g1) eqn:E; assumption. Qed.
 
-Lemma divstep_full'_iter_important_bits d f f0 g g0 u v q r n k
+Lemma hddivstep_full'_iter_important_bits d f f0 g g0 u v q r n k
       (Hk : (0 <= n < k)%nat)
       (fodd : Z.odd f = true)
       (fmod : f mod 2 ^ Z.of_nat k = f0 mod 2 ^ Z.of_nat k)
       (gmod : g mod 2 ^ Z.of_nat k = g0 mod 2 ^ Z.of_nat k) :
   let '(d1,f1,g1,u1,v1,q1,r1) :=
-      divstep_spec_full'_iter d f g u v q r n in
+      hddivstep_spec_full'_iter d f g u v q r n in
   let '(d2,f2,g2,u2,v2,q2,r2) :=
-      divstep_spec_full'_iter d f0 g0 u v q r n in
+      hddivstep_spec_full'_iter d f0 g0 u v q r n in
   g1 mod 2 ^ (k - n) = g2 mod 2 ^ (k - n) /\
   f1 mod 2 ^ (k - n) = f2 mod 2 ^ (k - n) /\
   d1 = d2 /\
@@ -1463,11 +1468,11 @@ Proof.
   - cbn in *. rewrite !Z.sub_0_r. repeat split; lia.
   - simpl.
 
-    pose proof divstep_full'_iter_f_odd d f g u v q r n.
-    pose proof divstep_full'_iter_f_odd d f0 g0 u v q r n.
+    pose proof hddivstep_full'_iter_f_odd d f g u v q r n.
+    pose proof hddivstep_full'_iter_f_odd d f0 g0 u v q r n.
 
-    destruct (divstep_spec_full'_iter d f g u v q r n) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E1.
-    destruct (divstep_spec_full'_iter d f0 g0 u v q r n) as [[[[[[d2 f2] g2] u2] v2] q2] r2] eqn:E2.
+    destruct (hddivstep_spec_full'_iter d f g u v q r n) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E1.
+    destruct (hddivstep_spec_full'_iter d f0 g0 u v q r n) as [[[[[[d2 f2] g2] u2] v2] q2] r2] eqn:E2.
 
     specialize (H fodd).
     assert (Z.odd f0 = true).
@@ -1484,7 +1489,7 @@ Proof.
     { rewrite <- odd_mod2m with (m:=k - n). rewrite H3.
       rewrite odd_mod2m. split. reflexivity. assumption. lia. lia. }
 
-    unfold divstep_spec_full'. destruct H2. rewrite H7, H2.
+    unfold hddivstep_spec_full'. destruct H2. rewrite H7, H2.
     inversion H6.
 
     destruct (0 <? d2); destruct (Z.odd g2) eqn:odd; cbn -[Z.mul Z.add Z.div].
@@ -1554,14 +1559,14 @@ Proof.
       rewrite Z.mod_pow_same_base_smaller. reflexivity. lia. lia. lia. lia. split. lia.
       rewrite !Zmod_odd, odd, H2. reflexivity. Qed.
 
-Lemma jump_divstep_full_iter m f g v r n
+Lemma jump_hddivstep_full_iter m f g v r n
       (fodd : Z.odd f = true)
       (Hv : 0 <= v < m)
       (Hr : 0 <= r < m)
   :
-    let '(d1, f1, g1, v1, r1) := divstep_full_iter m 1 f g v r n in
+    let '(d1, f1, g1, v1, r1) := hddivstep_full_iter m 1 f g v r n in
     (d1,2 ^ n * f1,2 ^ n * g1,v1,r1)
-  = let '(d1', f1', g1', u1', v1', q1', r1') := divstep_spec_full'_iter 1 f g 1 0 0 1 n in
+  = let '(d1', f1', g1', u1', v1', q1', r1') := hddivstep_spec_full'_iter 1 f g 1 0 0 1 n in
     (d1', (u1' * f + v1' * g), (q1' * f + r1' * g), (u1' * v + v1' * r) mod m, (q1' * v + r1' * r) mod m).
 Proof.
   induction n.
@@ -1570,16 +1575,16 @@ Proof.
            | [ |- (_, _) = (_, _) ] => apply f_equal2; rewrite ?Z.div_1_r, ?Z.mod_small by lia; try lia
            end.
   - cbn -[Z.pow Z.mul Z.add Z.of_nat].
-    pose proof divstep_full_iter_full'_iter m 1 f g 1 v 0 0 r 1 n.
-    pose proof divstep_full_iter_f_odd m f g v r n fodd as fodd1.
+    pose proof hddivstep_full_iter_full'_iter m 1 f g 1 v 0 0 r 1 n.
+    pose proof hddivstep_full_iter_f_odd m f g v r n fodd as fodd1.
 
-    destruct (divstep_spec_full'_iter 1 f g 1 0 0 1 n) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E1.
-    destruct (divstep_full_iter m 1 f g v r n) as [[[[d2 f2] g2] v2] r2] eqn:E2.
+    destruct (hddivstep_spec_full'_iter 1 f g 1 0 0 1 n) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E1.
+    destruct (hddivstep_full_iter m 1 f g v r n) as [[[[d2 f2] g2] v2] r2] eqn:E2.
 
     replace (Z.of_nat (S n)) with ((Z.of_nat n) + 1).
     rewrite <- Z.pow_mul_base.
-    unfold divstep_spec_full.
-    unfold divstep_spec_full'.
+    unfold hddivstep_spec_full.
+    unfold hddivstep_spec_full'.
     inversion H.
     inversion IHn.
     destruct (0 <? d1); destruct (Z.odd g1) eqn:godd; cbn -[Z.mul Z.add Z.div Z.of_nat];
@@ -1617,7 +1622,7 @@ Proof.
     rewrite Zmod_odd, godd. rewrite !Z.mul_0_l, !Z.add_0_r.
     rewrite Zmod_odd, godd. lia. lia. lia. lia. Qed.
 
-Lemma jump_divstep_full m f f0 g g0 v r n
+Lemma jump_hddivstep_full m f f0 g g0 v r n
       (fodd : Z.odd f = true)
       (Hm : 1 < m)
       (Hv : 0 <= v < m)
@@ -1625,20 +1630,20 @@ Lemma jump_divstep_full m f f0 g g0 v r n
       (Hf : f mod 2 ^ (Z.of_nat (S n)) = f0 mod 2 ^ (Z.of_nat (S n)))
       (Hg : g mod 2 ^ (Z.of_nat (S n)) = g0 mod 2 ^ (Z.of_nat (S n)))
   :
-  divstep_full_iter m 1 f g v r n
-  = let '(d1', f1', g1', u1', v1', q1', r1') := divstep_spec_full'_iter 1 f0 g0 1 0 0 1 n in
+  hddivstep_full_iter m 1 f g v r n
+  = let '(d1', f1', g1', u1', v1', q1', r1') := hddivstep_spec_full'_iter 1 f0 g0 1 0 0 1 n in
     (d1', (u1' * f + v1' * g) / 2 ^ n, (q1' * f + r1' * g) / 2 ^ n, (u1' * v + v1' * r) mod m, (q1' * v + r1' * r) mod m).
 Proof.
   assert (f0odd : Z.odd f0 = true).
   { rewrite <- odd_mod2m with (m:=S n). rewrite <- Hf. rewrite odd_mod2m. assumption. lia. lia. }
 
-  pose proof jump_divstep_full_iter m f g v r n fodd Hv Hr.
-  pose proof divstep_full'_iter_important_bits 1 f f0 g g0 1 0 0 1 n (S n) ltac:(lia) fodd Hf Hg.
+  pose proof jump_hddivstep_full_iter m f g v r n fodd Hv Hr.
+  pose proof hddivstep_full'_iter_important_bits 1 f f0 g g0 1 0 0 1 n (S n) ltac:(lia) fodd Hf Hg.
 
 
-  destruct (divstep_full_iter m 1 f g v r n) as [[[[d1 f1] g1] v1] r1] eqn:E1.
-  destruct (divstep_spec_full'_iter 1 f g 1 0 0 1 n) as [[[[[[d1' f1'] g1'] u1'] v1'] q1'] r1'] eqn:E2.
-  destruct (divstep_spec_full'_iter 1 f0 g0 1 0 0 1 n) as [[[[[[d1'' f1''] g1''] u1''] v1''] q1''] r1''] eqn:E3.
+  destruct (hddivstep_full_iter m 1 f g v r n) as [[[[d1 f1] g1] v1] r1] eqn:E1.
+  destruct (hddivstep_spec_full'_iter 1 f g 1 0 0 1 n) as [[[[[[d1' f1'] g1'] u1'] v1'] q1'] r1'] eqn:E2.
+  destruct (hddivstep_spec_full'_iter 1 f0 g0 1 0 0 1 n) as [[[[[[d1'' f1''] g1''] u1''] v1''] q1''] r1''] eqn:E3.
 
   destruct H0 as [H1 [H2 [H3 H4]]].
 
@@ -1677,10 +1682,28 @@ Proof.
     + rewrite Zpower_nat_succ_r.
       * destruct k. simpl. lia. lia. Qed.
 
+Lemma pow_ineq2 k : (3 <= k)%nat -> 2 * k + 2 <= Zpower_nat 2 k.
+Proof.
+  induction k; intros.
+  - lia.
+  - destruct k.
+    + lia.
+    + rewrite Zpower_nat_succ_r.
+      * destruct k.
+        ** simpl. lia.
+        ** destruct k.
+           *** simpl. lia.
+           *** lia. Qed.
+
 Lemma pow_ineq_Z k : 2 <= k -> k + 2 <= 2 ^ k.
 Proof.
   intros. replace k with (Z.of_nat (Z.to_nat k)).
   rewrite <- Zpower_nat_Z. apply pow_ineq. lia. lia. Qed.
+
+Lemma pow_ineq_Z2 k : 3 <= k -> 2 * k + 2 <= 2 ^ k.
+Proof.
+  intros. replace k with (Z.of_nat (Z.to_nat k)).
+  rewrite <- Zpower_nat_Z. apply pow_ineq2. lia. lia. Qed.
 
 Module WordByWordMontgomery.
   Import WordByWordMontgomery.WordByWordMontgomery.
@@ -1871,7 +1894,7 @@ Module WordByWordMontgomery.
     Theorem outer_loop_body_correct f g v r
             (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
             (n1 : (1 < n)%nat)
-            (mw1 : 2 < machine_wordsize)
+            (mw1 : 3 < machine_wordsize)
             (Hf : length f = sat_limbs)
             (Hg : length g = sat_limbs)
 
@@ -1894,7 +1917,7 @@ Module WordByWordMontgomery.
        @eval machine_wordsize n r1 mod m)
       =
       let '(_,f1',g1',v1',r1') :=
-          divstep_full_iter m 1
+          hddivstep_full_iter m 1
                             (eval_twos_complement machine_wordsize sat_limbs f)
                             (eval_twos_complement machine_wordsize sat_limbs g)
                             (@eval machine_wordsize n (from_montgomerymod machine_wordsize n m m' v) mod m)
@@ -1903,7 +1926,7 @@ Module WordByWordMontgomery.
       (Z.twos_complement (machine_wordsize * sat_limbs) f1',
        Z.twos_complement (machine_wordsize * sat_limbs) g1', v1', r1').
     Proof.
-      pose proof (pow_ineq_Z (machine_wordsize - 1) ltac:(lia)).
+      pose proof (pow_ineq_Z2 (machine_wordsize - 1) ltac:(lia)).
 
       assert (1 < 2 ^ machine_wordsize).
       { apply Zpow_facts.Zpower_gt_1. lia. lia. }
@@ -1923,7 +1946,7 @@ Module WordByWordMontgomery.
 
       replace (Z.of_nat (Z.to_nat (machine_wordsize - 2))) with (machine_wordsize - 2) in * by lia.
 
-      epose proof jump_divstep_full
+      epose proof jump_hddivstep_full
             m
             (eval_twos_complement machine_wordsize sat_limbs f)
             (Z.twos_complement machine_wordsize (nth_default 0 f 0))
@@ -1941,7 +1964,7 @@ Module WordByWordMontgomery.
       destruct (    fold_left (fun (i : Z * Z * Z * Z * Z * Z * Z) (_ : nat) => twos_complement_word_full_divstep_aux machine_wordsize i)
                               (seq 0 (Z.to_nat (machine_wordsize - 2))) (1, nth_default 0 f 0, nth_default 0 g 0, 1, 0, 0, 1)) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E1 .
 
-      destruct (divstep_full_iter
+      destruct (hddivstep_full_iter
                   m 1
                   (eval_twos_complement machine_wordsize sat_limbs f)
                   (eval_twos_complement machine_wordsize sat_limbs g)
@@ -1950,7 +1973,7 @@ Module WordByWordMontgomery.
         as [[[[d1' f1'] g1'] v1'] r1'] eqn:E2.
 
 
-      destruct (divstep_spec_full'_iter
+      destruct (hddivstep_spec_full'_iter
                   1
                   (Z.twos_complement machine_wordsize (nth_default 0 f 0))
                   (Z.twos_complement machine_wordsize (nth_default 0 g 0))
@@ -2402,7 +2425,7 @@ Module UnsaturatedSolinas.
   Theorem outer_loop_body_correct f g v r
           (fodd : Z.odd (eval_twos_complement machine_wordsize sat_limbs f) = true)
           (n1 : (1 < n)%nat)
-          (mw1 : 2 < machine_wordsize)
+          (mw1 : 3 < machine_wordsize)
           (Hf : length f = sat_limbs)
           (Hg : length g = sat_limbs)
           (Hv : length v = n)
@@ -2424,7 +2447,7 @@ Module UnsaturatedSolinas.
      eval r1 mod (s - Associational.eval c))
     =
     let '(_,f1',g1',v1',r1') :=
-        divstep_full_iter (s - Associational.eval c) 1
+        hddivstep_full_iter (s - Associational.eval c) 1
                           (eval_twos_complement machine_wordsize sat_limbs f)
                           (eval_twos_complement machine_wordsize sat_limbs g)
                           (eval v mod (s - Associational.eval c))
@@ -2433,7 +2456,7 @@ Module UnsaturatedSolinas.
     (Z.twos_complement (machine_wordsize * sat_limbs) f1',
      Z.twos_complement (machine_wordsize * sat_limbs) g1', v1', r1').
     Proof.
-      pose proof (pow_ineq_Z (machine_wordsize - 1) ltac:(lia)).
+      pose proof (pow_ineq_Z2 (machine_wordsize - 1) ltac:(lia)).
 
       assert (1 < 2 ^ machine_wordsize).
       { apply Zpow_facts.Zpower_gt_1. lia. lia. }
@@ -2453,7 +2476,7 @@ Module UnsaturatedSolinas.
 
       replace (Z.of_nat (Z.to_nat (machine_wordsize - 2))) with (machine_wordsize - 2) in * by lia.
 
-      epose proof jump_divstep_full
+      epose proof jump_hddivstep_full
             (s - Associational.eval c)
             (eval_twos_complement machine_wordsize sat_limbs f)
             (Z.twos_complement machine_wordsize (nth_default 0 f 0))
@@ -2471,7 +2494,7 @@ Module UnsaturatedSolinas.
       destruct (    fold_left (fun (i : Z * Z * Z * Z * Z * Z * Z) (_ : nat) => twos_complement_word_full_divstep_aux machine_wordsize i)
                               (seq 0 (Z.to_nat (machine_wordsize - 2))) (1, nth_default 0 f 0, nth_default 0 g 0, 1, 0, 0, 1)) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E1 .
 
-      destruct (divstep_full_iter
+      destruct (hddivstep_full_iter
                   (s - Associational.eval c) 1
                   (eval_twos_complement machine_wordsize sat_limbs f)
                   (eval_twos_complement machine_wordsize sat_limbs g)
@@ -2480,7 +2503,7 @@ Module UnsaturatedSolinas.
                   (Z.to_nat (machine_wordsize - 2)))
         as [[[[d1' f1'] g1'] v1'] r1'] eqn:E2.
 
-      destruct (divstep_spec_full'_iter
+      destruct (hddivstep_spec_full'_iter
                   1
                   (Z.twos_complement machine_wordsize (nth_default 0 f 0))
                   (Z.twos_complement machine_wordsize (nth_default 0 g 0))
