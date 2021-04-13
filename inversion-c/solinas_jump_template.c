@@ -13,11 +13,7 @@
 #define SAT_ADD MAKE_FN_NAME(CURVE_DESCRIPTION,_sat_add)
 #define WORD_SAT_MUL MAKE_FN_NAME(CURVE_DESCRIPTION,_word_sat_mul)
 
-#if LEN_PRIME < 46
-#define ITERATIONS (((49 * LEN_PRIME) + 80) / 17)
-#else
-#define ITERATIONS (((49 * LEN_PRIME) + 57) / 17)
-#endif
+#define ITERATIONS (45907 * LEN_PRIME + 26313) / 19929
 
 #define SAT_LIMBS (((LEN_PRIME - 1) / WORDSIZE) + 2) /* we might need 2 more bits to represent m in twos complement */
 #define WORD_SAT_MUL_LIMBS (SAT_LIMBS + 1) /* we might need 1 more limb to represent a word/multilimb multiplication */

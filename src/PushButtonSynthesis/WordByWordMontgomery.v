@@ -132,6 +132,8 @@ Section __.
   Definition n_bytes := bytes_n s.
 
   Definition iterations bits := if bits <? 46 then (49 * bits + 80) / 17 else (49 * bits + 57) / 17.
+
+  Definition hddivstep_iterations bits := (45907 * bits + 26313) / 19929.
   
   Definition divstep_precompmod :=
     let bits := (Z.log2 m) + 1 in
@@ -141,7 +143,7 @@ Section __.
 
   Definition jumpdivstep_precompmod :=
     let bits := (Z.log2 m) + 1 in
-    let jump_iterations := ((iterations bits) / (machine_wordsize - 2)) + 1 in
+    let jump_iterations := ((hddivstep_iterations bits) / (machine_wordsize - 2)) + 1 in
     let total_iterations := jump_iterations * (machine_wordsize - 2) in
     let k := (m + 1) / 2 in
     let precomp := (Z.modexp k total_iterations m) in

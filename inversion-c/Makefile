@@ -4,7 +4,7 @@ MONTY_PROGS = $(patsubst %.c,%,$(MONTY_SRCS))
 SOLINAS_SRCS = $(wildcard solinas/*_test.c) $(wildcard solinas_jump/*_test.c) $(wildcard solinas_jump_alt/*_test.c) 
 SOLINAS_PROGS = $(patsubst %.c,%,$(SOLINAS_SRCS))
 
-CC = gcc
+CC = clang
 CFLAGS = -O3 -march=native
 
 all: $(MONTY_PROGS) $(SOLINAS_PROGS)

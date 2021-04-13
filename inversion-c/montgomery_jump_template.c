@@ -12,11 +12,7 @@
 #define MUL MAKE_FN_NAME(CURVE_DESCRIPTION,_mul)
 #define OPP MAKE_FN_NAME(CURVE_DESCRIPTION,_opp)
 
-#if LEN_PRIME < 46
-#define ITERATIONS (((49 * LEN_PRIME) + 80) / 17)
-#else
-#define ITERATIONS (((49 * LEN_PRIME) + 57) / 17)
-#endif
+#define ITERATIONS (45907 * LEN_PRIME + 26313) / 19929
 
 #define SAT_LIMBS LIMBS + 1 /* we might need 2 more bits to represent m in twos complement */
 #define WORD_SAT_MUL_LIMBS LIMBS + 2 /* we might need 1 more limb to represent a word/multilimb multiplication */
@@ -72,7 +68,7 @@ void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
       g[k] = g4[k];
     }
 
-		WORD u1[LIMBS], v01[LIMBS], q1[LIMBS], r01[LIMBS];
+    WORD u1[LIMBS], v01[LIMBS], q1[LIMBS], r01[LIMBS];
 
     SIGNED_TO_MONTGOMERY(u1, u0);
     SIGNED_TO_MONTGOMERY(v01, v0);
