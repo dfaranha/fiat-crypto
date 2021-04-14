@@ -12,6 +12,7 @@
 #define SIGNED_TO_SOLINA MAKE_FN_NAME(CURVE_DESCRIPTION,_word_to_solina)
 #define SAT_ADD MAKE_FN_NAME(CURVE_DESCRIPTION,_sat_add)
 #define WORD_SAT_MUL MAKE_FN_NAME(CURVE_DESCRIPTION,_word_sat_mul)
+#define SZNZ MAKE_FN_NAME(CURVE_DESCRIPTION,_selectznz)
 
 #define ITERATIONS (45907 * LEN_PRIME + 26313) / 19929
 
@@ -25,7 +26,7 @@
 void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
 
   WORD precomp[LIMBS];
-	PRECOMP(precomp);
+  PRECOMP(precomp);
 
   WORD d = 1;
   WORD f[SAT_LIMBS];
@@ -69,7 +70,7 @@ void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
       g[k] = g4[k];
     }
 
-		WORD u1[LIMBS], v01[LIMBS], q1[LIMBS], r01[LIMBS];
+    WORD u1[LIMBS], v01[LIMBS], q1[LIMBS], r01[LIMBS];
 
     SIGNED_TO_SOLINA(u1, u0);
     SIGNED_TO_SOLINA(v01, v0);
@@ -83,17 +84,15 @@ void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
     MUL(r2, r01, r);
 
     ADD(v3, v1, v2);
-		CARRY(v, v3);
+    CARRY(v, v3);
     ADD(r3, r1, r2);
-		CARRY(r, r3);
+    CARRY(r, r3);
   }
-	
+  
   WORD h[LIMBS];
-  if (f[SAT_LIMBS - 1] >> (WORDSIZE - 1)) {
-    OPP(h, v);
-		CARRY(v, h);
-  }
-
+  OPP(h, v);
+  CARRY(h, h);
+  SZNZ(v, f[SAT_LIMBS -1 ] >> (WORDSIZE - 1), v, h);
   MUL(out, v, precomp);
 
   return;

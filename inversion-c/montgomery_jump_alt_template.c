@@ -5,6 +5,7 @@
 #define MSAT MAKE_FN_NAME(CURVE_DESCRIPTION,_msat)
 #define MUL MAKE_FN_NAME(CURVE_DESCRIPTION,_mul)
 #define OPP MAKE_FN_NAME(CURVE_DESCRIPTION,_opp)
+#define SZNZ MAKE_FN_NAME(CURVE_DESCRIPTION, _selectznz)
 
 #define BODY MAKE_FN_NAME(CURVE_DESCRIPTION,_outer_loop_body)	
 
@@ -19,7 +20,7 @@
 void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
 
   WORD precomp[LIMBS];
-	PRECOMP(precomp);
+  PRECOMP(precomp);
 	
   WORD f1[SAT_LIMBS], f[SAT_LIMBS], g1[SAT_LIMBS];
   WORD v1[LIMBS], v[LIMBS];
@@ -42,11 +43,8 @@ void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
   }
 
   WORD h[LIMBS];
-  if (f[SAT_LIMBS - 1] >> (WORDSIZE - 1)) {
-    OPP(h, v);
-    for (int l = 0; l < LIMBS; l++) v[l] = h[l];
-  }
-
+  OPP(h, v);
+  SZNZ(v, f[SAT_LIMBS -1 ] >> (WORDSIZE - 1), v, h);
   MUL(out, v, precomp);
 
   return;
