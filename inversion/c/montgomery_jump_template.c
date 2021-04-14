@@ -11,6 +11,7 @@
 #define ADD MAKE_FN_NAME(CURVE_DESCRIPTION,_add)
 #define MUL MAKE_FN_NAME(CURVE_DESCRIPTION,_mul)
 #define OPP MAKE_FN_NAME(CURVE_DESCRIPTION,_opp)
+#define SZNZ MAKE_FN_NAME(CURVE_DESCRIPTION, _selectznz)
 
 #if LEN_PRIME < 46
 #define ITERATIONS (((49 * LEN_PRIME) + 80) / 17)
@@ -28,7 +29,7 @@
 void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
 
   WORD precomp[LIMBS];
-	PRECOMP(precomp);
+  PRECOMP(precomp);
 
   WORD d = 1;
   WORD f[SAT_LIMBS];
@@ -72,7 +73,7 @@ void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
       g[k] = g4[k];
     }
 
-		WORD u1[LIMBS], v01[LIMBS], q1[LIMBS], r01[LIMBS];
+    WORD u1[LIMBS], v01[LIMBS], q1[LIMBS], r01[LIMBS];
 
     SIGNED_TO_MONTGOMERY(u1, u0);
     SIGNED_TO_MONTGOMERY(v01, v0);
@@ -90,11 +91,8 @@ void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
   }
 
   WORD h[LIMBS];
-  if (f[SAT_LIMBS - 1] >> (WORDSIZE - 1)) {
-    OPP(h, v);
-    for (int l = 0; l < LIMBS; l++) v[l] = h[l];
-  }
-
+  OPP(h, v);
+  SZNZ(v, f[SAT_LIMBS -1 ] >> (WORDSIZE - 1), v, h);
   MUL(out, v, precomp);
 
   return;

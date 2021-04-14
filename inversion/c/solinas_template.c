@@ -8,6 +8,7 @@
 #define OPP MAKE_FN_NAME(CURVE_DESCRIPTION,_opp)
 #define MUL MAKE_FN_NAME(CURVE_DESCRIPTION,_carry_mul)
 #define CARRY MAKE_FN_NAME(CURVE_DESCRIPTION,_carry)
+#define SZNZ MAKE_FN_NAME(CURVE_DESCRIPTION,_selectznz)
 
 #if LEN_PRIME < 46
 #define ITERATIONS (((49 * LEN_PRIME) + 80) / 17)
@@ -48,11 +49,9 @@ void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
   }
 
   WORD h[LIMBS];
-  if (f[SAT_LIMBS - 1] >> (WORDSIZE - 1)) {
-    OPP(h, v);
-		CARRY(v, h);
-  }
-
+  OPP(h, v);
+  CARRY(h, h);
+  SZNZ(v, f[SAT_LIMBS -1 ] >> (WORDSIZE - 1), v, h);
   MUL(out, v, precomp);
 
   return;
