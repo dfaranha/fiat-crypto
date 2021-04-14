@@ -19,7 +19,7 @@ inline long long cpucycles(void) {
 }
 
 long long t[64];
-WORD x[LIMBS];
+WORD x[SAT_LIMBS];
 
 void bench(void (*inv)(WORD out[LIMBS], WORD in[LIMBS])) {
   long long i,j;
