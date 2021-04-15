@@ -21,7 +21,7 @@ inline long long cpucycles(void) {
 }
 
 long long t[64];
-WORD x[LIMBS];
+WORD x[SAT_LIMBS];
 
 void bench(void) {
   long long i,j;
@@ -59,6 +59,8 @@ void bench(void) {
   for (i = 1;i < 64;++i)
     printf(" %lld",t[i]);
   printf("\n");
+  printf("median");
+  printf(" %lld\n",t[32]);
   
   fflush(stdout);
 }
