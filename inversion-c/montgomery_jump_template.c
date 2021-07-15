@@ -15,8 +15,8 @@
 
 #define ITERATIONS (45907 * LEN_PRIME + 26313) / 19929
 
-#define SAT_LIMBS LIMBS + 1 /* we might need 2 more bits to represent m in twos complement */
-#define WORD_SAT_MUL_LIMBS LIMBS + 2 /* we might need 1 more limb to represent a word/multilimb multiplication */
+#define SAT_LIMBS LIMBS + 1		/* we might need 2 more bits to represent m in twos complement */
+#define WORD_SAT_MUL_LIMBS LIMBS + 2	/* we might need 1 more limb to represent a word/multilimb multiplication */
 #define BYTES (((LEN_PRIME - 1) / 8) + 1)
 
 #define INNER_LOOP (WORDSIZE - 2)
@@ -24,72 +24,78 @@
 
 void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
 
-  WORD precomp[LIMBS];
-  PRECOMP(precomp);
+	WORD precomp[LIMBS];
+	PRECOMP(precomp);
 
-  WORD d = 1;
-  WORD f[SAT_LIMBS];
-  WORD v[LIMBS];
-  WORD r[LIMBS];
-  WORD f0, g0, u0, v0, q0, r0, out1, out2, out3, out4, out5, out6, out7;
+	WORD d = 1;
+	WORD f[SAT_LIMBS];
+	WORD v[LIMBS];
+	WORD r[LIMBS];
+	WORD f0, g0, u0, v0, q0, r0, out1, out2, out3, out4, out5, out6, out7;
 
-  MSAT(f);
-  for (int i = 0; i < LIMBS; i++) r[i] = 0;
-  r[0] = 1;
+	MSAT(f);
+	for (int i = 0; i < LIMBS; i++)
+		r[i] = 0;
+	r[0] = 1;
 
-  for (int j = 0; j < LIMBS; j++) v[j] = 0;
+	for (int j = 0; j < LIMBS; j++)
+		v[j] = 0;
 
-  for (int i = 0; i < OUTER_LOOP; i++) {
-    u0 = 1;
-    v0 = 0;
-    q0 = 0;
-    r0 = 1;
+	for (int i = 0; i < OUTER_LOOP; i++) {
+		u0 = 1;
+		v0 = 0;
+		q0 = 0;
+		r0 = 1;
 
-    f0 = f[0];
-    g0 = g[0];
-    for (int j = 0; j < INNER_LOOP; j += 2) {
-      DIVSTEP(&out1, &out2, &out3, &out4, &out5, &out6, &out7, d, f0, g0, u0, v0, q0, r0);
-      DIVSTEP(&d, &f0, &g0, &u0, &v0, &q0, &r0, out1, out2, out3, out4, out5, out6, out7);
-    }
-    WORD f1[WORD_SAT_MUL_LIMBS], f2[WORD_SAT_MUL_LIMBS], f3[WORD_SAT_MUL_LIMBS], g1[WORD_SAT_MUL_LIMBS], g2[WORD_SAT_MUL_LIMBS], g3[WORD_SAT_MUL_LIMBS];
-    WORD_SAT_MUL(f1, u0, f);
-    WORD_SAT_MUL(f2, v0, g);
-    WORD_SAT_MUL(g1, q0, f);
-    WORD_SAT_MUL(g2, r0, g);
+		f0 = f[0];
+		g0 = g[0];
+		for (int j = 0; j < INNER_LOOP; j += 2) {
+			DIVSTEP(&out1, &out2, &out3, &out4, &out5, &out6, &out7, d, f0, g0,
+					u0, v0, q0, r0);
+			DIVSTEP(&d, &f0, &g0, &u0, &v0, &q0, &r0, out1, out2, out3, out4,
+					out5, out6, out7);
+		}
+		WORD f1[WORD_SAT_MUL_LIMBS], f2[WORD_SAT_MUL_LIMBS],
+				f3[WORD_SAT_MUL_LIMBS], g1[WORD_SAT_MUL_LIMBS],
+				g2[WORD_SAT_MUL_LIMBS], g3[WORD_SAT_MUL_LIMBS];
+		WORD_SAT_MUL(f1, u0, f);
+		WORD_SAT_MUL(f2, v0, g);
+		WORD_SAT_MUL(g1, q0, f);
+		WORD_SAT_MUL(g2, r0, g);
 
-    SAT_ADD(f3, f1, f2);
-    SAT_ADD(g3, g1, g2);
+		SAT_ADD(f3, f1, f2);
+		SAT_ADD(g3, g1, g2);
 
-    WORD f4[WORD_SAT_MUL_LIMBS], g4[WORD_SAT_MUL_LIMBS];
-    SHIFTR(f4, f3);
-    SHIFTR(g4, g3);
+		WORD f4[WORD_SAT_MUL_LIMBS], g4[WORD_SAT_MUL_LIMBS];
+		SHIFTR(f4, f3);
+		SHIFTR(g4, g3);
 
-    for (int k = 0; k < SAT_LIMBS; k++) {
-      f[k] = f4[k];
-      g[k] = g4[k];
-    }
+		for (int k = 0; k < SAT_LIMBS; k++) {
+			f[k] = f4[k];
+			g[k] = g4[k];
+		}
 
-    WORD u1[LIMBS], v01[LIMBS], q1[LIMBS], r01[LIMBS];
+		WORD u1[LIMBS], v01[LIMBS], q1[LIMBS], r01[LIMBS];
 
-    SIGNED_TO_MONTGOMERY(u1, u0);
-    SIGNED_TO_MONTGOMERY(v01, v0);
-    SIGNED_TO_MONTGOMERY(q1, q0);
-    SIGNED_TO_MONTGOMERY(r01, r0);
+		SIGNED_TO_MONTGOMERY(u1, u0);
+		SIGNED_TO_MONTGOMERY(v01, v0);
+		SIGNED_TO_MONTGOMERY(q1, q0);
+		SIGNED_TO_MONTGOMERY(r01, r0);
 
-    WORD v1[LIMBS], v2[LIMBS], r1[LIMBS], r2[LIMBS];
-    MUL(v1, u1, v);
-    MUL(v2, v01, r);
-    MUL(r1, q1, v);
-    MUL(r2, r01, r);
+		WORD v1[LIMBS], v2[LIMBS], r1[LIMBS], r2[LIMBS];
+		MUL(v1, u1, v);
+		MUL(v2, v01, r);
+		MUL(r1, q1, v);
+		MUL(r2, r01, r);
 
-    ADD(v, v1, v2);
-    ADD(r, r1, r2);
-  }
+		ADD(v, v1, v2);
+		ADD(r, r1, r2);
+	}
 
-  WORD h[LIMBS];
-  OPP(h, v);
-  SZNZ(v, f[SAT_LIMBS -1 ] >> (WORDSIZE - 1), v, h);
-  MUL(out, v, precomp);
+	WORD h[LIMBS];
+	OPP(h, v);
+	SZNZ(v, f[SAT_LIMBS - 1] >> (WORDSIZE - 1), v, h);
+	MUL(out, v, precomp);
 
-  return;
+	return;
 }
