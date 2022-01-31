@@ -7,7 +7,7 @@ Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.BaseConversion.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
-Require Import Crypto.Arithmetic.BYInv.
+Require Import Crypto.Arithmetic.BYInv.Definitions.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
@@ -230,10 +230,10 @@ Module Solinas.
             (length_saturated_bounds : length saturated_bounds = n)
             (m_pos : 0 < m)
             (bitwidth : Z).
-    
+
     Local Notation eval := (Positional.eval wt n).
     Local Notation bytes_eval := (Positional.eval (weight 8 1) n_bytes).
-    Local Notation twos_complement_eval f := (eval_twos_complement bitwidth n f).
+    Local Notation twos_complement_eval f := (tc_eval bitwidth n f).
 
     Let prime_bytes_upperbound_list : list Z
       := Partition.partition (weight 8 1) n_bytes (s-1).
@@ -371,7 +371,7 @@ Module Solinas.
 
     Definition word_divstep_correct
                (divstep : Z -> Z -> Z -> Z -> Z -> Z -> Z -> Z * Z * Z * Z * Z * Z * Z) : Prop
-      := forall d f g u v q r, 
+      := forall d f g u v q r,
         divstep d f g u v q r =
           if (0 <? d) && Z.odd g
            then (1 - d,
@@ -413,7 +413,7 @@ Module Solinas.
                (outer_loop_body : list Z -> list Z -> list Z -> list Z) : Prop
       :=
         forall f g (r v : list Z), eval f = eval g. (* dummy. this should be the that its iteration yields the inverse *)
-    
+
     Section ring.
       Context carry_mul (Hcarry_mul : carry_mul_correct carry_mul)
               add       (Hadd       :       add_correct add)
@@ -547,7 +547,7 @@ Module WordByWordMontgomery.
             (length_saturated_bounds : length saturated_bounds = n).
     Local Notation eval := (@WordByWordMontgomery.eval bitwidth n).
     Local Notation bytes_eval := (Positional.eval (weight 8 1) n_bytes).
-    Local Notation twos_complement_eval f := (eval_twos_complement bitwidth n f).
+    Local Notation twos_complement_eval f := (tc_eval bitwidth n f).
 
     Let prime_bound : zrange
       := r[0~>(m - 1)]%zrange.

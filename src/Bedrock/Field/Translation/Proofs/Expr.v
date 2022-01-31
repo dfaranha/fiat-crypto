@@ -19,6 +19,7 @@ Require Import Rewriter.Util.Bool.Reflect.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
+Require Import Crypto.Util.ZUtil.TruncatingShiftl.
 Require Import Crypto.Util.ZUtil.LnotModulo.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
@@ -663,7 +664,7 @@ Section Expr.
       eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.
       cbv [WeakestPrecondition.literal dlet.dlet].
-      rewrite TruncatingShiftl.Z.truncating_shiftl_correct.
+      rewrite Z.truncating_shiftl_correct.
       apply word.unsigned_inj.
       rewrite word.unsigned_slu, !word.unsigned_of_Z
         by (rewrite word.unsigned_of_Z; cbv [word.wrap];

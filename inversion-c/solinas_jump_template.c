@@ -10,8 +10,8 @@
 #define DIVSTEP MAKE_FN_NAME(CURVE_DESCRIPTION,_twos_complement_word_full_divstep)
 #define SHIFTR MAKE_FN_NAME(CURVE_DESCRIPTION,_asr_mw_sub2)
 #define SIGNED_TO_SOLINA MAKE_FN_NAME(CURVE_DESCRIPTION,_word_to_solina)
-#define SAT_ADD MAKE_FN_NAME(CURVE_DESCRIPTION,_sat_add)
-#define WORD_SAT_MUL MAKE_FN_NAME(CURVE_DESCRIPTION,_word_sat_mul)
+#define SAT_ADD MAKE_FN_NAME(CURVE_DESCRIPTION,_tc_add)
+#define WORD_SAT_MUL MAKE_FN_NAME(CURVE_DESCRIPTION,_word_tc_mul)
 #define SZNZ MAKE_FN_NAME(CURVE_DESCRIPTION,_selectznz)
 
 #if LEN_PRIME < 46
@@ -92,7 +92,7 @@ void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
     ADD(r3, r1, r2);
     CARRY(r, r3);
   }
-  
+
   WORD h[LIMBS];
   OPP(h, v);
   CARRY(h, h);

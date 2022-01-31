@@ -21408,7 +21408,7 @@
     ]
   },
   {
-    "operation": "fiat_25519_sat_add",
+    "operation": "fiat_25519_tc_add",
     "arguments": [
       {
         "datatype": "u32[10]",
@@ -21731,7 +21731,7 @@
     ]
   },
   {
-    "operation": "fiat_25519_word_sat_mul",
+    "operation": "fiat_25519_word_tc_mul",
     "arguments": [
       {
         "datatype": "u32",

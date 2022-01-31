@@ -160,13 +160,13 @@ JAVA_$(call JAVA_RENAME,$(1))_BITWIDTH:=$(4)
 JAVA_$(call JAVA_RENAME,$(1))_ARGS:=$(4) $(5)
 JAVA_$(call JAVA_RENAME,$(1))_FUNCTIONS:=$(6)
 
-BEDROCK2_$(1)_FUNCTIONS:=$(filter-out %msat %divstep %divstep_precomp %twos_complement_word_full_divstep %asr_mw_sub2 %sat_add word_sat_mul %jumpdivstep_precomp %twos_complement_word_to_montgomery_no_encode %outer_loop_body %word_to_solina, $(6))
+BEDROCK2_$(1)_FUNCTIONS:=$(filter-out %msat %divstep %divstep_precomp %twos_complement_word_full_divstep %asr_mw_sub2 %tc_add word_tc_mul %jumpdivstep_precomp %twos_complement_word_to_montgomery_no_encode %outer_loop_body %word_to_solina, $(6))
 
 endef
 
 INVERSION_FUNCTIONS := msat sat_from_bytes
 DIVSTEP_FUNCTIONS := divstep divstep_precomp
-JUMP_DIVSTEP_FUNCTIONS := twos_complement_word_full_divstep asr_mw_sub2  sat_add word_sat_mul jumpdivstep_precomp
+JUMP_DIVSTEP_FUNCTIONS := twos_complement_word_full_divstep asr_mw_sub2  tc_add word_tc_mul jumpdivstep_precomp
 MONTGOMERY_INVERSION := twos_complement_word_to_montgomery_no_encode $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body
 UNSATURATED_SOLINAS_INVERSION := word_to_solina $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body
 
