@@ -40,43 +40,6 @@ Hint Immediate (proj2 reified_msat_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_msat_gen_correct) : interp_gen_cache.
 Local Opaque reified_msat_gen. (* needed for making [autorewrite] not take a very long time *)
 
-Definition asr machine_wordsize n k f := arithmetic_shiftr machine_wordsize n f k.
-
-Derive reified_asr_gen
-       SuchThat (is_reification_of reified_asr_gen asr)
-       As reified_asr_gen_correct.
-Proof. Time cache_reify (). Time Qed.
-Hint Extern 1 (_ = _) => apply_cached_reification arithmetic_shiftr (proj1 reified_asr_gen_correct) : reify_cache_gen.
-Hint Rewrite (proj1 reified_asr_gen_correct) : interp_gen_cache.
-Local Opaque reified_asr_gen. (* needed for making [autorewrite] not take a very long time *)
-
-Derive reified_word_tc_mul_gen
-       SuchThat (is_reification_of reified_word_tc_mul_gen word_tc_mul)
-       As reified_word_tc_mul_gen_correct.
-Proof. Time cache_reify (). Time Qed.
-Hint Extern 1 (_ = _) => apply_cached_reification word_tc_mul (proj1 reified_word_tc_mul_gen_correct) : reify_cache_gen.
-Hint Immediate (proj2 reified_word_tc_mul_gen_correct) : wf_gen_cache.
-Hint Rewrite (proj1 reified_word_tc_mul_gen_correct) : interp_gen_cache.
-Local Opaque reified_word_tc_mul_gen. (* needed for making [autorewrite] not take a very long time *)
-
-Derive reified_twos_complement_word_full_divstep_gen
-       SuchThat (is_reification_of reified_twos_complement_word_full_divstep_gen twos_complement_word_full_divstep)
-       As reified_twos_complement_word_full_divstep_gen_correct.
-Proof. Time cache_reify (). Time Qed.
-Hint Extern 1 (_ = _) => apply_cached_reification twos_complement_word_full_divstep (proj1 reified_twos_complement_word_full_divstep_gen_correct) : reify_cache_gen.
-Hint Immediate (proj2 reified_twos_complement_word_full_divstep_gen_correct) : wf_gen_cache.
-Hint Rewrite (proj1 reified_twos_complement_word_full_divstep_gen_correct) : interp_gen_cache.
-Local Opaque reified_twos_complement_word_full_divstep_gen. (* needed for making [autorewrite] not take a very long time *)
-
-Derive reified_tc_add_gen
-       SuchThat (is_reification_of reified_tc_add_gen tc_add)
-       As reified_tc_add_gen_correct.
-Proof. Time cache_reify (). Time Qed.
-Hint Extern 1 (_ = _) => apply_cached_reification tc_add (proj1 reified_tc_add_gen_correct) : reify_cache_gen.
-Hint Immediate (proj2 reified_tc_add_gen_correct) : wf_gen_cache.
-Hint Rewrite (proj1 reified_tc_add_gen_correct) : interp_gen_cache.
-Local Opaque reified_tc_add_gen. (* needed for making [autorewrite] not take a very long time *)
-
 Module Export WordByWordMontgomery.
   Import Definitions.WordByWordMontgomery.
 
@@ -88,15 +51,6 @@ Module Export WordByWordMontgomery.
   Hint Immediate (proj2 reified_outer_loop_body_gen_correct) : wf_gen_cache.
   Hint Rewrite (proj1 reified_outer_loop_body_gen_correct) : interp_gen_cache.
   Local Opaque reified_outer_loop_body_gen. (* needed for making [autorewrite] not take a very long time *)
-
-  Derive reified_twos_complement_word_to_montgomery_no_encode_gen
-         SuchThat (is_reification_of reified_twos_complement_word_to_montgomery_no_encode_gen twos_complement_word_to_montgomery_no_encode)
-         As reified_twos_complement_word_to_montgomery_no_encode_gen_correct.
-  Proof. Time cache_reify (). Time Qed.
-  Hint Extern 1 (_ = _) => apply_cached_reification twos_complement_word_to_montgomery_no_encode (proj1 reified_twos_complement_word_to_montgomery_no_encode_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_twos_complement_word_to_montgomery_no_encode_gen_correct) : wf_gen_cache.
-  Hint Rewrite (proj1 reified_twos_complement_word_to_montgomery_no_encode_gen_correct) : interp_gen_cache.
-  Local Opaque reified_twos_complement_word_to_montgomery_no_encode_gen.
 
   Derive reified_divstep_gen
          SuchThat (is_reification_of reified_divstep_gen divstep)
@@ -119,15 +73,6 @@ Module Export UnsaturatedSolinas.
   Hint Immediate (proj2 reified_outer_loop_body_gen_correct) : wf_gen_cache.
   Hint Rewrite (proj1 reified_outer_loop_body_gen_correct) : interp_gen_cache.
   Local Opaque reified_outer_loop_body_gen. (* needed for making [autorewrite] not take a very long time *)
-
-  Derive reified_word_to_solina_gen
-         SuchThat (is_reification_of reified_word_to_solina_gen word_to_solina)
-         As reified_word_to_solina_gen_correct.
-  Proof. Time cache_reify (). Time Qed.
-  Hint Extern 1 (_ = _) => apply_cached_reification word_to_solina (proj1 reified_word_to_solina_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_word_to_solina_gen_correct) : wf_gen_cache.
-  Hint Rewrite (proj1 reified_word_to_solina_gen_correct) : interp_gen_cache.
-  Local Opaque reified_word_to_solina_gen. (* needed for making [autorewrite] not take a very long time *)
 
   Derive reified_divstep_gen
          SuchThat (is_reification_of reified_divstep_gen divstep)

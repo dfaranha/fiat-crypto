@@ -369,46 +369,6 @@ Module Solinas.
          (* /\ list_Z_bounded_by tight_bounds v1 *)
         (* /\ list_Z_bounded_by tight_bounds r1 *)).
 
-    Definition word_divstep_correct
-               (divstep : Z -> Z -> Z -> Z -> Z -> Z -> Z -> Z * Z * Z * Z * Z * Z * Z) : Prop
-      := forall d f g u v q r,
-        divstep d f g u v q r =
-          if (0 <? d) && Z.odd g
-           then (1 - d,
-                 g,
-                 (g - f) / 2,
-                 2 * q,
-                 2 * r,
-                 q - u,
-                 v - r)
-           else (1 + d,
-                 f,
-                 (g + (g mod 2) * f) / 2,
-                 2 * u,
-                 2 * v,
-                 q + (g mod 2) * u,
-                 r + (g mod 2) * v).
-
-    Definition asr_mw_sub2_correct
-               (asr : list Z -> list Z) : Prop
-      :=
-        forall x, eval (asr x) = (eval x) / 2 ^ (bitwidth - 2).
-
-    Definition word_sat_mul_correct
-               (mul : Z -> list Z -> list Z) : Prop
-      :=
-        forall x y, eval (mul x y) = x * eval y.
-
-    Definition sat_add_correct
-               (add : list Z -> list Z -> list Z) : Prop
-      :=
-        forall x y, eval (add x y) = (eval x) + (eval y).
-
-    Definition word_to_solina_correct
-               (word_to_solina : Z -> list Z) : Prop
-      :=
-        forall x, eval (word_to_solina x) = x.
-
     Definition outer_loop_body_correct
                (outer_loop_body : list Z -> list Z -> list Z -> list Z) : Prop
       :=
