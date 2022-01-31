@@ -29074,7 +29074,7 @@
     ]
   },
   {
-    "operation": "fiat_p256_sat_add",
+    "operation": "fiat_p256_tc_add",
     "arguments": [
       {
         "datatype": "u32[10]",
@@ -29397,7 +29397,7 @@
     ]
   },
   {
-    "operation": "fiat_p256_word_sat_mul",
+    "operation": "fiat_p256_word_tc_mul",
     "arguments": [
       {
         "datatype": "u32",

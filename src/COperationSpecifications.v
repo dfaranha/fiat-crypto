@@ -7,7 +7,7 @@ Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.BaseConversion.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
-Require Import Crypto.Arithmetic.BYInv.
+Require Import Crypto.Arithmetic.BYInv.Definitions.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
@@ -251,7 +251,7 @@ Module Solinas.
 
     Local Notation eval := (Positional.eval wt n).
     Local Notation bytes_eval := (Positional.eval (weight 8 1) n_bytes).
-    Local Notation twos_complement_eval f := (eval_twos_complement bitwidth n f).
+    Local Notation twos_complement_eval f := (tc_eval bitwidth n f).
 
     Let prime_bytes_upperbound_list : list Z
       := Partition.partition (weight 8 1) n_bytes (s-1).
@@ -604,7 +604,7 @@ Module WordByWordMontgomery.
             (length_saturated_bounds : length saturated_bounds = n).
     Local Notation eval := (@WordByWordMontgomery.eval bitwidth n).
     Local Notation bytes_eval := (Positional.eval (weight 8 1) n_bytes).
-    Local Notation twos_complement_eval f := (eval_twos_complement bitwidth n f).
+    Local Notation twos_complement_eval f := (tc_eval bitwidth n f).
 
     Let prime_bound : zrange
       := r[0~>(m - 1)]%zrange.

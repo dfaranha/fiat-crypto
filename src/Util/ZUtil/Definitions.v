@@ -119,7 +119,7 @@ Module Z.
 
   (** Special identity function for constant-time cmov *)
   Definition value_barrier (x : Z) := x.
-  
+
   (* arithmetic right shift *)
   Definition arithmetic_shiftr1 (m a : Z) :=
     (a &' 2^(m - 1)) |' (a >> 1).
@@ -138,7 +138,7 @@ Module Z.
           q |' (a >> k).
 
   (** Note that the following definition may be inconvenient to reason about,
-      and [(a + 2^(m-1)) mod 2^m - 2^(m-1)] may prove simpler to reason about arithmetically. 
+      and [(a + 2^(m-1)) mod 2^m - 2^(m-1)] may prove simpler to reason about arithmetically.
       See also https://github.com/mit-plv/coqutil/blob/c8006ceca816076b117c31d7feaefb5bbb850754/src/coqutil/Word/Naive.v#L15
       and https://github.com/mit-plv/coqutil/blob/c8006ceca816076b117c31d7feaefb5bbb850754/src/coqutil/Word/Properties.v#L190 *)
 
@@ -158,6 +158,14 @@ Module Z.
    Long term, we would like to add comparison operators to the supported C language *)
   Definition twos_complement_pos m a :=
     dlet b := twos_complement_opp m a in sign_bit m b.
+
+  (* This version does not introduce larger types unnecessarily *)
+  Definition twos_complement_opp' m a :=
+    (fst (Z.add_get_carry_full (2^m) (Z.lnot_modulo a (2 ^ m)) 1)) mod (2 ^ m).
+
+  (* This version does not introduce larger types unnecessarily *)
+  Definition twos_complement_pos' m a :=
+    dlet b := twos_complement_opp' m a in (Z.shiftr b (m-1)).
 
   (* multiplication to bit width mab *)
   Definition twos_complement_mul_aux ma mb mab a b :=

@@ -41,7 +41,7 @@ Require Import Crypto.Arithmetic.Freeze.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
 Require Import Crypto.Arithmetic.UniformWeight.
-Require Import Crypto.Arithmetic.BYInv.
+Require Import Crypto.Arithmetic.BYInv.Definitions.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
@@ -248,7 +248,6 @@ Section __.
     := { name := "non_montgomery_domain_field_element"
          ; description name := (text_before_type_name ++ name ++ " is a field element NOT in the Montgomery domain.")%string }.
 
-
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
@@ -343,7 +342,7 @@ Section __.
                             (CorrectnessStringification.dyn_context.cons
                                (Z.log2 m) "⌊log2 m⌋"
                                (CorrectnessStringification.dyn_context.cons
-                                  (@eval_twos_complement machine_wordsize n) "twos_complement_eval"
+                                  (tc_eval machine_wordsize n) "twos_complement_eval"
                                   CorrectnessStringification.dyn_context.nil)))))))%string)
          (only parsing).
   Local Notation "'docstring_with_summary_from_lemma!' prefix summary correctness"
@@ -810,42 +809,42 @@ Section __.
              (forall v, valid v)).
              (* (shiftr62_correct machine_wordsize n m valid from_montgomery_res)). *)
 
-  Definition word_sat_mul
+  Definition word_tc_mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          None (* fancy *)
          possible_values
-         (reified_word_sat_mul_gen
+         (reified_word_tc_mul_gen
             @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify sat_limbs)
          ((Some r[0~>2^machine_wordsize-1]%zrange, (Some larger_bounds, tt)))
          (Some even_larger_bounds).
 
-  Definition sword_sat_mul (prefix : string)
+  Definition sword_tc_mul (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          machine_wordsize prefix "word_sat_mul" word_sat_mul
+          machine_wordsize prefix "word_tc_mul" word_tc_mul
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " computes a divstep on wordsized integers."]%string)
              (forall v, valid v)).
              (* (word_sat_mul_correct machine_wordsize n m valid from_montgomery_res)). *)
 
-  Definition sat_add
+  Definition tc_add
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          None (* fancy *)
          possible_values
-         (reified_sat_add_gen
+         (reified_tc_add_gen
             @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify word_sat_mul_limbs)
          ((Some even_larger_bounds, (Some even_larger_bounds, tt)))
          (Some even_larger_bounds).
 
-  Definition ssat_add (prefix : string)
+  Definition stc_add (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          machine_wordsize prefix "sat_add" sat_add
+          machine_wordsize prefix "tc_add" tc_add
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " computes a divstep on wordsized integers."]%string)
@@ -1347,8 +1346,8 @@ Section __.
             ("twos_complement_word_full_divstep", wrap_s stwos_complement_word_full_divstep);
             ("asr_mw_sub2", wrap_s sasr_mw_sub2);
             ("twos_complement_word_to_montgomery_no_encode", wrap_s stwos_complement_word_to_montgomery_no_encode);
-            ("sat_add", wrap_s ssat_add);
-            ("word_sat_mul", wrap_s sword_sat_mul);
+            ("tc_add", wrap_s stc_add);
+            ("word_tc_mul", wrap_s sword_tc_mul);
             ("jumpdivstep_precomp", wrap_s sjumpdivstep_precomp);
             ("outer_loop_body", wrap_s souter_loop_body)].
 

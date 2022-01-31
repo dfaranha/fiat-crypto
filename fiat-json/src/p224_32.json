@@ -24714,7 +24714,7 @@
     ]
   },
   {
-    "operation": "fiat_p224_sat_add",
+    "operation": "fiat_p224_tc_add",
     "arguments": [
       {
         "datatype": "u32[9]",
@@ -25008,7 +25008,7 @@
     ]
   },
   {
-    "operation": "fiat_p224_word_sat_mul",
+    "operation": "fiat_p224_word_tc_mul",
     "arguments": [
       {
         "datatype": "u32",

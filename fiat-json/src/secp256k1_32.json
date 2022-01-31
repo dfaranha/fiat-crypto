@@ -32006,7 +32006,7 @@
     ]
   },
   {
-    "operation": "fiat_secp256k1_sat_add",
+    "operation": "fiat_secp256k1_tc_add",
     "arguments": [
       {
         "datatype": "u32[10]",
@@ -32329,7 +32329,7 @@
     ]
   },
   {
-    "operation": "fiat_secp256k1_word_sat_mul",
+    "operation": "fiat_secp256k1_word_tc_mul",
     "arguments": [
       {
         "datatype": "u32",

@@ -11295,7 +11295,7 @@
     ]
   },
   {
-    "operation": "fiat_poly1305_sat_add",
+    "operation": "fiat_poly1305_tc_add",
     "arguments": [
       {
         "datatype": "u32[7]",
@@ -11531,7 +11531,7 @@
     ]
   },
   {
-    "operation": "fiat_poly1305_word_sat_mul",
+    "operation": "fiat_poly1305_word_tc_mul",
     "arguments": [
       {
         "datatype": "u32",
