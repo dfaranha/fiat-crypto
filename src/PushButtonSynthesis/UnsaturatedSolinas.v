@@ -208,9 +208,9 @@ Section __.
   Let possible_values_no_bit := [0; machine_wordsize; 2 * machine_wordsize].
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
   Definition bounds : list (ZRange.type.option.interp base.type.Z)
-    := Option.invert_Some saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+    := saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
   Definition larger_bounds : list (ZRange.type.option.interp base.type.Z)
-    := Option.invert_Some larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+    := larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
 
   Definition divstep_input :=
     (Some r[0~>2^machine_wordsize-1],
@@ -761,18 +761,18 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_msat_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify m)
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify m)
          tt
          (Some larger_bounds).
 
   Definition smsat (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "msat" msat
           (docstring_with_summary_from_lemma!
              (fun fname => ["The function " ++ fname ++ " returns the saturated (signed) representation of the prime modulus."]%string)
-             (msat_correct n m saturated_bounds_list machine_wordsize)).
+             (msat_correct machine_wordsize n m saturated_bounds)).
 
   Definition divstep_precomp
     := Pipeline.BoundsPipeline
@@ -785,9 +785,9 @@ Section __.
          (Some tight_bounds).
 
   Definition sdivstep_precomp (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "divstep_precomp" divstep_precomp
           (docstring_with_summary_from_lemma!
              (fun fname => ["The function " ++ fname ++ " returns the precomputed value for Bernstein-Yang-inversion (in montgomery form)."]%string)
@@ -801,7 +801,7 @@ Section __.
          (reified_divstep_gen
             @ GallinaReify.Reify (Qnum limbwidth)
             @ GallinaReify.Reify (Z.pos (Qden limbwidth))
-            @ GallinaReify.Reify machine_wordsize
+            @ GallinaReify.Reify (machine_wordsize:Z)
             @ GallinaReify.Reify s
             @ GallinaReify.Reify c
             @ GallinaReify.Reify n
@@ -812,13 +812,13 @@ Section __.
          divstep_output.
 
   Definition sdivstep (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "divstep" divstep
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " computes a divstep."]%string)
-             (divstep_correct weightf n m (* tight_bounds saturated_bounds_list *) machine_wordsize)).
+             (divstep_correct machine_wordsize weightf n m (* tight_bounds saturated_bounds_list *))).
 
   Definition sat_from_bytes
     := Pipeline.BoundsPipeline
@@ -826,18 +826,18 @@ Section __.
          None (* fancy *)
          possible_values_with_bytes
          (reified_from_bytes_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify 1 @ GallinaReify.Reify sat_upper_bound @ GallinaReify.Reify sat_limbs)
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify 1 @ GallinaReify.Reify sat_upper_bound @ GallinaReify.Reify sat_limbs)
          (saturated_bytes_bounds, tt)
          (Some larger_bounds).
 
   Definition ssat_from_bytes (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "sat_from_bytes" sat_from_bytes
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " deserializes a field element NOT in the Montgomery domain from bytes in little-endian order."]%string)
-             (from_bytes_correct weightu sat_limbs n_bytes m s saturated_bounds_list)).
+             (from_bytes_correct weightu sat_limbs n_bytes m s saturated_bounds)).
              (* (forall v, valid v)). *)
              (* (from_bytes_correct machine_wordsize n n_bytes m valid bytes_valid)). *)
 
@@ -852,9 +852,9 @@ Section __.
          (Some bounds).
 
   Definition sjumpdivstep_precomp (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "jumpdivstep_precomp" jumpdivstep_precomp
           (docstring_with_summary_from_lemma!
              (fun fname => ["The function " ++ fname ++ " returns the precomputed value for the jump-version of Bernstein-Yang-inversion (in montgomery form)."]%string)
@@ -868,7 +868,7 @@ Section __.
          (reified_outer_loop_body_gen
             @ GallinaReify.Reify (Qnum limbwidth)
             @ GallinaReify.Reify (Z.pos (Qden limbwidth))
-            @ GallinaReify.Reify machine_wordsize
+            @ GallinaReify.Reify (machine_wordsize:Z)
             @ GallinaReify.Reify s
             @ GallinaReify.Reify c
             @ GallinaReify.Reify n
@@ -880,9 +880,9 @@ Section __.
          loop_output.
 
   Definition souter_loop_body (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "outer_loop_body" outer_loop_body
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " computes the body of the outer loop in BY-inversion (jumpdivstep version)."]%string)

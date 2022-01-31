@@ -12,14 +12,16 @@ Section Z.
 
   Lemma twos_complement_opp_bound m a (Hm : 0 <= m) :
     0 <= Z.twos_complement_opp m a < 2 ^ m.
-  Proof. unfold Z.twos_complement_opp; apply Z.mod_pos_bound.
-         apply Z.pow_pos_nonneg; lia.
+  Proof.
+    unfold Z.twos_complement_opp; apply Z.mod_pos_bound.
+    apply Z.pow_pos_nonneg; lia.
   Qed.
 
   Lemma twos_complement_opp_correct m a :
     (Z.twos_complement_opp m a) = - a mod 2 ^ m.
-  Proof. unfold Z.twos_complement_opp, Z.lnot_modulo, Z.lnot.
-         rewrite Zplus_mod_idemp_l, <- Z.sub_1_r; apply f_equal2; lia.
+  Proof.
+    unfold Z.twos_complement_opp, Z.lnot_modulo, Z.lnot.
+    rewrite Zplus_mod_idemp_l, <- Z.sub_1_r; apply f_equal2; lia.
   Qed.
 
   Lemma twos_complement_zopp a m (Hm : 0 < m) (corner_case : Z.twos_complement m a <> - 2 ^ (m - 1)) :
@@ -53,7 +55,7 @@ Section Z.
   Proof.
     unfold Z.twos_complement_opp', Z.twos_complement_opp.
     destruct (Z_lt_dec m 0).
-    - rewrite !Z.pow_neg_r, !Zmod_0_r by assumption; reflexivity.
+    - rewrite !Z.pow_neg_r, !Zmod_0_r by assumption; cbn; rewrite Zmod_0_r; reflexivity.
     - rewrite Z.add_get_carry_full_mod; auto with zarith.
   Qed.
 

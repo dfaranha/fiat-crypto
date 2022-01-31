@@ -246,8 +246,7 @@ Module Solinas.
             (length_loose_bounds : length loose_bounds = n)
             (saturated_bounds : list (option zrange))
             (length_saturated_bounds : length saturated_bounds = n)
-            (m_pos : 0 < m)
-            (bitwidth : Z).
+            (m_pos : 0 < m).
 
     Local Notation eval := (Positional.eval wt n).
     Local Notation bytes_eval := (Positional.eval (weight 8 1) n_bytes).

@@ -1,4 +1,4 @@
-#include "../../fiat-c/src/curve25519_64.c"
+#include "../../../fiat-c/src/curve25519_64.c"
 
 #define LIMBS 5 /* amount of limbs pr. large integer in montgomery domain, see montgomery_inversion */
 #define WORD uint64_t

@@ -1,4 +1,4 @@
-#include "../../fiat-c/src/poly1305_32.c"
+#include "../../../fiat-c/src/poly1305_32.c"
 
 #define LIMBS 5 /* amount of limbs pr. large integer in montgomery domain, see montgomery_inversion */
 #define WORD uint32_t

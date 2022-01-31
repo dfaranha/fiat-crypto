@@ -23,53 +23,11 @@ Import Crypto.Util.ZUtil.Notations.
 Local Open Scope Z_scope.
 Local Coercion Z.of_nat : nat >-> Z.
 
-(* Require Import Coq.Strings.String. *)
-(* Require Import Coq.Bool.Bool. *)
-(* Require Import Coq.ZArith.ZArith. *)
-(* Require Import Coq.Lists.List. *)
-(* Require Import Coq.nsatz.Nsatz. *)
-(* Require Import Coq.micromega.Lia. *)
-(* Require Import Crypto.Arithmetic.UniformWeight. *)
-(* Require Import Crypto.Arithmetic.Saturated. *)
-(* Require Import Crypto.Arithmetic.Core. *)
-(* Require Import Crypto.Arithmetic.WordByWordMontgomery. *)
-
-(* Require Import Crypto.Util.LetIn. *)
-(* Require Import Crypto.Util.ListUtil. *)
-(* Require Import Crypto.Util.ZUtil.Notations. *)
-(* Require Import Crypto.Arithmetic.Partition. *)
-(* Require Import Crypto.Util.Decidable. *)
 Require Import Crypto.Util.ZUtil.Definitions.
-(* Require Import Crypto.Util.ZUtil.TruncatingShiftl. *)
-(* Require Import Crypto.Util.ZUtil.Modulo. *)
-(* Require Import Crypto.Util.ZUtil.Testbit. *)
-(* Require Import Crypto.Util.ZUtil.Shift. *)
-(* Require Import Crypto.Util.ZUtil.Div. *)
-(* Require Import Crypto.Util.ZUtil.Lor. *)
-(* Require Import Crypto.Util.ZUtil.Land. *)
 Require Import Crypto.Util.ZUtil.ArithmeticShiftr.
 Require Import Crypto.Util.ZUtil.Pow.
-(* Require Import Crypto.Util.ZUtil.LandLorShiftBounds. *)
-(* Require Import Crypto.Util.ZUtil.SignBit. *)
-(* Require Import Crypto.Util.ZUtil.SignExtend. *)
-(* Require Import Crypto.Util.ZUtil.TwosComplement. *)
-(* Require Import Crypto.Util.ZUtil.TwosComplementMul. *)
-(* Require Import Crypto.Util.ZUtil.TwosComplementNeg. *)
-(* Require Import Crypto.Util.ZUtil.TwosComplementPos. *)
-(* Require Import Crypto.Arithmetic.ModOps. *)
-
 Require Import Crypto.Util.ZUtil.Tactics.SolveRange.
-(* Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo. *)
 Require Import Crypto.Util.ZUtil.Tactics.SolveTestbit.
-
-(* Require Import Crypto.Arithmetic.BYInv. *)
-
-(* Import Positional. *)
-(* Import ListNotations. *)
-(* Import Definitions. *)
-(* Import Crypto.Util.ZUtil.Notations. *)
-(* Import WordByWordMontgomery. *)
-
 
 (** Section about arithmetic right shift *)
 

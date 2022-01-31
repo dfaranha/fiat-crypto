@@ -171,10 +171,8 @@ Section __.
   Definition saturated_bytes_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
     := Some (List.map (fun v => Some r[0 ~> v]%zrange) saturated_bytes_list).
   Local Notation word_bound := (word_bound machine_wordsize).
-  Local Notation saturated_bounds_list := (saturated_bounds_list n machine_wordsize).
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
   Local Notation larger_saturated_bounds := (Primitives.saturated_bounds sat_limbs machine_wordsize).
-
 
   Definition divstep_input :=
     (Some r[0~>2^machine_wordsize-1],
@@ -216,8 +214,6 @@ Section __.
     := saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
   Definition larger_bounds : list (ZRange.type.option.interp base.type.Z)
     := larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
-  Definition even_larger_bounds : list (ZRange.type.option.interp base.type.Z)
-    := even_larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
   Definition montgomery_domain_bounds := saturated_bounds.
   Definition non_montgomery_domain_bounds := saturated_bounds.
   Typeclasses Opaque montgomery_domain_bounds.
@@ -732,14 +728,14 @@ Section __.
          None (* fancy *)
          possible_values_with_bytes
          (reified_from_bytes_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify 1 @ GallinaReify.Reify sat_upper_bound @ GallinaReify.Reify sat_limbs)
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify 1 @ GallinaReify.Reify sat_upper_bound @ GallinaReify.Reify sat_limbs)
          (saturated_bytes_bounds, tt)
          (Some larger_bounds).
 
   Definition ssat_from_bytes (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "sat_from_bytes" sat_from_bytes
           (docstring_with_summary_from_lemma!
              prefix
@@ -753,7 +749,7 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_encode_gen
-            @ GallinaReify.Reify machine_wordsize
+            @ GallinaReify.Reify (machine_wordsize:Z)
             @ GallinaReify.Reify n
             @ GallinaReify.Reify m
             @ GallinaReify.Reify m'
@@ -762,9 +758,9 @@ Section __.
          (Some bounds).
 
   Definition sjumpdivstep_precomp (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "jumpdivstep_precomp" jumpdivstep_precomp
           (docstring_with_summary_from_lemma!
              prefix
@@ -777,7 +773,7 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_outer_loop_body_gen
-            @ GallinaReify.Reify machine_wordsize
+            @ GallinaReify.Reify (machine_wordsize:Z)
             @ GallinaReify.Reify n
             @ GallinaReify.Reify sat_limbs
             @ GallinaReify.Reify word_sat_mul_limbs
@@ -787,9 +783,9 @@ Section __.
          loop_output.
 
   Definition souter_loop_body (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "outer_loop_body" outer_loop_body
           (docstring_with_summary_from_lemma!
              prefix

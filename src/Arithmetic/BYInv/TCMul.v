@@ -16,31 +16,15 @@ Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.TwosComplement.
 Require Import Crypto.Util.ZUtil.TwosComplementMul.
 Require Import Crypto.Util.ZUtil.SignExtend.
-(* Require Import Crypto.Util.ZUtil.Div. *)
-(* Require Import Crypto.Util.ZUtil.TruncatingShiftl. *)
-(* Require Import Crypto.Util.ZUtil.Lor. *)
-(* Require Import Crypto.Util.ZUtil.Land. *)
 Require Import Crypto.Util.ListUtil.
 
-(* Require Import Crypto.Arithmetic.ModOps. *)
-
-(* Require Import Crypto.Util.ZUtil.Tactics.SolveRange. *)
-(* Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo. *)
-(* Require Import Crypto.Util.ZUtil.Tactics.SolveTestbit. *)
-
-(* Import Positional. *)
 Import ListNotations.
-(* Import Definitions. *)
-(* Import Crypto.Util.ZUtil.Notations. *)
-(* Import WordByWordMontgomery. *)
-
 
 Import Positional.
 Import Crypto.Util.ZUtil.Notations.
 
 Local Open Scope Z_scope.
 Local Coercion Z.of_nat : nat >-> Z.
-
 
 Lemma sat_mul_bounds machine_wordsize n1 n2 f g
       (mw0 : 0 < machine_wordsize)
@@ -112,7 +96,7 @@ Proof.
   rewrite uweight_eq_alt.
   replace ((2 ^ m) ^ Z.of_nat (2 * nab)) with (2 ^ (m * Z.of_nat nab) * 2 ^ (m * Z.of_nat nab)) by
       (rewrite <- Z.pow_mul_r, <- Z.pow_add_r by nia; apply f_equal; nia). all: try nia; try assumption.
-  apply Z.pow_nonzero; lia. distr_length. distr_length.
+  distr_length. distr_length.
   apply Rows.length_mul; try assumption; distr_length.
   apply sat_mul_bounds; distr_length; lia.
 Qed.
