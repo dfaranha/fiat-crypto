@@ -1256,7 +1256,7 @@ Proof.
 Qed.
 
 Lemma map_seq_ext {A} (f g : nat -> A) (n m k : nat)
-      (H : forall i : nat, n <= i <= m + k -> f i = g (i + (m - n))%nat)
+      (H : forall i : nat, n <= i < m + k -> f i = g (i + (m - n))%nat)
       (Hnm : n <= m) :
   map f (seq n k) = map g (seq m k).
 Proof.

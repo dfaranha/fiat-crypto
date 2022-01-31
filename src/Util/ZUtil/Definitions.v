@@ -119,7 +119,7 @@ Module Z.
 
   (** Special identity function for constant-time cmov *)
   Definition value_barrier (x : Z) := x.
-  
+
   (* arithmetic right shift *)
   Definition arithmetic_shiftr1 (m a : Z) :=
     (a &' 2^(m - 1)) |' (a >> 1).
@@ -138,7 +138,7 @@ Module Z.
           q |' (a >> k).
 
   (** Note that the following definition may be inconvenient to reason about,
-      and [(a + 2^(m-1)) mod 2^m - 2^(m-1)] may prove simpler to reason about arithmetically. 
+      and [(a + 2^(m-1)) mod 2^m - 2^(m-1)] may prove simpler to reason about arithmetically.
       See also https://github.com/mit-plv/coqutil/blob/c8006ceca816076b117c31d7feaefb5bbb850754/src/coqutil/Word/Naive.v#L15
       and https://github.com/mit-plv/coqutil/blob/c8006ceca816076b117c31d7feaefb5bbb850754/src/coqutil/Word/Properties.v#L190 *)
 
@@ -150,7 +150,7 @@ Module Z.
     ((Z.lnot_modulo a (2 ^ m)) + 1) mod (2 ^ m).
 
   (* Check if a number considered in twos complement of bitwidth m is negative *)
-  Definition twos_complement_neg m a := a >> (m - 1).
+  Definition twos_complement_neg m a := (a mod 2 ^ m) >> (m - 1).
 
   (* note the corner case condition: when f is exactly 2 to the mw-1'th power, then -f = f and
    so checking that -f is negative does not work in that case.
@@ -159,6 +159,19 @@ Module Z.
   Definition twos_complement_pos m a :=
     dlet b := twos_complement_opp m a in sign_bit m b.
 
+  (* This version does not introduce larger types unnecessarily *)
+  Definition twos_complement_opp' m a :=
+    (fst (Z.add_get_carry_full (2^m) (Z.lnot_modulo a (2 ^ m)) 1)) mod (2 ^ m).
+
+  (* This version does not introduce larger types unnecessarily *)
+  Definition twos_complement_pos' m a :=
+    dlet b := twos_complement_opp' m a in (Z.shiftr b (m-1)).
+
+  (* multiplication to bit width mab *)
+  Definition twos_complement_mul_aux ma mb mab a b :=
+    (sign_extend ma mab a) * (sign_extend mb mab b).
+
+  (* multiplication to bitwidth ma + mb *)
   Definition twos_complement_mul ma mb a b :=
-    (sign_extend ma (ma + mb) a) * (sign_extend mb (ma + mb) b).
+    twos_complement_mul_aux ma mb (ma + mb) a b.
 End Z.

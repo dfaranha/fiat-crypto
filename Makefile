@@ -160,13 +160,20 @@ JAVA_$(call JAVA_RENAME,$(1))_BITWIDTH:=$(4)
 JAVA_$(call JAVA_RENAME,$(1))_ARGS:=$(4) $(5)
 JAVA_$(call JAVA_RENAME,$(1))_FUNCTIONS:=$(6)
 
-BEDROCK2_$(1)_FUNCTIONS:=$(filter-out %msat %divstep %divstep_precomp, $(6))
+BEDROCK2_$(1)_FUNCTIONS:=$(filter-out %msat %divstep %divstep_precomp %jumpdivstep_precomp %outer_loop_body, $(6))
 
 endef
 
-UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes
+INVERSION_FUNCTIONS := msat sat_from_bytes
+DIVSTEP_FUNCTIONS := divstep divstep_precomp
+JUMP_DIVSTEP_FUNCTIONS := jumpdivstep_precomp
+MONTGOMERY_INVERSION := $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body
+UNSATURATED_SOLINAS_INVERSION := $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body
+
+UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes one $(UNSATURATED_SOLINAS_INVERSION)
 FUNCTIONS_FOR_25519 := $(UNSATURATED_SOLINAS_FUNCTIONS) carry_scmul121666
-WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery to_montgomery nonzero selectznz to_bytes from_bytes one msat divstep divstep_precomp
+WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery to_montgomery nonzero selectznz to_bytes from_bytes one $(MONTGOMERY_INVERSION)
+
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
 WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/word_by_word_montgomery
 
@@ -189,6 +196,11 @@ $(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_$(bw),WORD_BY_WORD_MON
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p384_$(bw),WORD_BY_WORD_MONTGOMERY,'p384',$(bw),'2^384 - 2^128 - 2^96 + 2^32 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS))))
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p224_$(bw),WORD_BY_WORD_MONTGOMERY,'p224',$(bw),'2^224 - 2^96 + 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS))))
 $(foreach bw,64,$(eval $(call add_curve_keys,p434_$(bw),WORD_BY_WORD_MONTGOMERY,'p434',$(bw),'2^216 * 3^137 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS)))) # 32 is a bit too heavy
+
+# Pairing-friendly primes
+$(foreach bw,64,$(eval $(call add_curve_keys,bn254_$(bw),WORD_BY_WORD_MONTGOMERY,'bn254',$(bw),'0x2523648240000001BA344D80000000086121000000000013A700000000000013',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS))))
+$(foreach bw,64,$(eval $(call add_curve_keys,bls381_$(bw),WORD_BY_WORD_MONTGOMERY,'bls381',$(bw),'4002409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS))))
+$(foreach bw,64,$(eval $(call add_curve_keys,bls575_$(bw),WORD_BY_WORD_MONTGOMERY,'bls575',$(bw),'82352580032278788011362796404342557786312913723536619091477792771037233586724706310819232445024720779321561685250160616845976770828526854009901348339027274903154397023928059',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS))))
 
 # Files taking 30s or less
 LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_64 p384_64 p224_32 p434_64 p448_solinas_64 secp256k1_32 p256_32 p448_solinas_32

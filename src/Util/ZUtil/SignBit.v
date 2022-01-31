@@ -30,6 +30,8 @@ Module Z.
     rewrite Z.testbit_spec', Z.mod_small, <- Z.shiftr_div_pow2 by Z.solve_range.
     reflexivity. Qed.
 
+  Hint Rewrite sign_bit_testbit : testbit_rewrite.
+  
   Lemma sign_bit_equiv a m
         (Hm : 0 < m)
         (Ha : 0 <= a < 2 ^ m) :
