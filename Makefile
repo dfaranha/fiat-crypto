@@ -216,15 +216,15 @@ JAVA_$(call JAVA_RENAME,$(1))_BITWIDTH:=$(4)
 JAVA_$(call JAVA_RENAME,$(1))_ARGS:=$(4) $(5)
 JAVA_$(call JAVA_RENAME,$(1))_FUNCTIONS:=$(6)
 
-BEDROCK2_$(1)_FUNCTIONS:=$(filter-out %msat %divstep %divstep_precomp %jumpdivstep_precomp %outer_loop_body, $(6))
+BEDROCK2_$(1)_FUNCTIONS:=$(filter-out %msat %divstep %divstep_precomp %jumpdivstep_precomp %outer_loop_body %outer_loop_body_hd, $(6))
 
 endef
 
 INVERSION_FUNCTIONS := msat sat_from_bytes
 DIVSTEP_FUNCTIONS := divstep divstep_precomp
 JUMP_DIVSTEP_FUNCTIONS := jumpdivstep_precomp
-MONTGOMERY_INVERSION := $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body
-UNSATURATED_SOLINAS_INVERSION := $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body
+MONTGOMERY_INVERSION := $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body outer_loop_body_hd
+UNSATURATED_SOLINAS_INVERSION := $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body outer_loop_body_hd
 
 UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes one relax $(UNSATURATED_SOLINAS_INVERSION)
 FUNCTIONS_FOR_25519 := $(UNSATURATED_SOLINAS_FUNCTIONS) carry_scmul121666

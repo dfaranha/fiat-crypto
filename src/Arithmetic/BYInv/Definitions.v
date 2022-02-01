@@ -137,6 +137,34 @@ Definition twos_complement_word_full_divstep machine_wordsize d f g u v q r :=
 Definition twos_complement_word_full_divsteps machine_wordsize d f g u v q r n :=
   fold_left (fun data i => twos_complement_word_full_divstep_aux machine_wordsize data) (seq 0 n) (d,f,g,u,v,q,r).
 
+Definition twos_complement_word_full_hddivstep_aux machine_wordsize (data : Z * Z * Z * Z * Z * Z * Z) :=
+  let '(d,f,g,u,v,q,r) := data in
+  let cond := Z.land (Z.twos_complement_pos machine_wordsize d) (g mod 2) in
+  dlet d' := Z.zselect cond d (Z.twos_complement_opp machine_wordsize d) in
+  dlet f' := Z.zselect cond f g in
+  dlet g' := Z.zselect cond g (Z.twos_complement_opp machine_wordsize f) in
+  dlet u' := Z.zselect cond u q in
+  dlet v' := Z.zselect cond v r in
+  let u'':= (u' + u') mod 2^machine_wordsize in
+  let v'':= (v' + v') mod 2^machine_wordsize in
+  dlet q' := Z.zselect cond q (Z.twos_complement_opp machine_wordsize u) in
+  dlet r' := Z.zselect cond r (Z.twos_complement_opp machine_wordsize v) in
+  let g0 := g' mod 2 in
+  let d'' := (2 + d') mod 2^machine_wordsize in
+  dlet f'' := Z.zselect g0 0 f' in
+  let g'' := Z.arithmetic_shiftr1 machine_wordsize ((g' + f'') mod 2^machine_wordsize) in
+  dlet u''' := Z.zselect g0 0 u' in
+  dlet v''' := Z.zselect g0 0 v' in
+  let q'' := (q' + u''') mod 2^machine_wordsize in
+  let r'' := (r' + v''') mod 2^machine_wordsize in
+  (d'',f',g'',u'',v'',q'',r'').
+
+Definition twos_complement_word_full_hddivstep machine_wordsize d f g u v q r :=
+  twos_complement_word_full_hddivstep_aux machine_wordsize (d, f, g, u, v, q, r).
+
+Definition twos_complement_word_full_hddivsteps machine_wordsize d f g u v q r n :=
+  fold_left (fun data i => twos_complement_word_full_hddivstep_aux machine_wordsize data) (seq 0 n) (d,f,g,u,v,q,r).
+
 Module Export WordByWordMontgomery.
 
   Import Positional.
@@ -219,8 +247,30 @@ Module Export WordByWordMontgomery.
       dlet r3 := mulmod machine_wordsize n m m' r02 r in
       dlet v4 := addmod machine_wordsize n m v2 v3 in
       dlet r4 := addmod machine_wordsize n m r2 r3 in
+                                                (f6, g6, v4, r4).
+    Definition outer_loop_body_hd f g (v r : list Z) :=
+      let '(_,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_hddivstep_aux machine_wordsize data) (1,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+      dlet f2 := word_tc_mul machine_wordsize sat_limbs u1 f in
+      dlet f3 := word_tc_mul machine_wordsize sat_limbs v1 g in
+      dlet g2 := word_tc_mul machine_wordsize sat_limbs q1 f in
+      dlet g3 := word_tc_mul machine_wordsize sat_limbs r1 g in
+      dlet f4 := tc_add machine_wordsize word_tc_mul_limbs f2 f3 in
+      dlet g4 := tc_add machine_wordsize word_tc_mul_limbs g2 g3 in
+      dlet f5 := arithmetic_shiftr machine_wordsize word_tc_mul_limbs f4 (machine_wordsize - 2) in
+      dlet g5 := arithmetic_shiftr machine_wordsize word_tc_mul_limbs g4 (machine_wordsize - 2) in
+      dlet f6 := firstn sat_limbs f5 in
+      dlet g6 := firstn sat_limbs g5 in
+      dlet u2 := twos_complement_word_to_montgomery_no_encode u1 in
+      dlet v02 := twos_complement_word_to_montgomery_no_encode v1 in
+      dlet q2 := twos_complement_word_to_montgomery_no_encode q1 in
+      dlet r02 := twos_complement_word_to_montgomery_no_encode r1 in
+      dlet v2 := mulmod machine_wordsize n m m' u2 v in
+      dlet v3 := mulmod machine_wordsize n m m' v02 r in
+      dlet r2 := mulmod machine_wordsize n m m' q2 v in
+      dlet r3 := mulmod machine_wordsize n m m' r02 r in
+      dlet v4 := addmod machine_wordsize n m v2 v3 in
+      dlet r4 := addmod machine_wordsize n m r2 r3 in
           (f6, g6, v4, r4).
-
   End __.
 
 End WordByWordMontgomery.
@@ -277,6 +327,32 @@ Module UnsaturatedSolinas.
 
     Definition outer_loop_body f g (v r : list Z) :=
       let '(_,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_divstep_aux machine_wordsize data) (1,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+      dlet f2 := word_tc_mul machine_wordsize tc_limbs u1 f in
+      dlet f3 := word_tc_mul machine_wordsize tc_limbs v1 g in
+      dlet g2 := word_tc_mul machine_wordsize tc_limbs q1 f in
+      dlet g3 := word_tc_mul machine_wordsize tc_limbs r1 g in
+      dlet f4 := tc_add machine_wordsize word_tc_mul_limbs f2 f3 in
+      dlet g4 := tc_add machine_wordsize word_tc_mul_limbs g2 g3 in
+      dlet f5 := arithmetic_shiftr machine_wordsize word_tc_mul_limbs f4 (machine_wordsize - 2) in
+      dlet g5 := arithmetic_shiftr machine_wordsize word_tc_mul_limbs g4 (machine_wordsize - 2) in
+      dlet f6 := firstn tc_limbs f5 in
+      dlet g6 := firstn tc_limbs g5 in
+      dlet u2 := word_to_solina u1 in
+      dlet v02 := word_to_solina v1 in
+      dlet q2 := word_to_solina q1 in
+      dlet r02 := word_to_solina r1 in
+      dlet v2 := carry_mulmod limbwidth_num limbwidth_den s c n idxs u2 v in
+      dlet v3 := carry_mulmod limbwidth_num limbwidth_den s c n idxs v02 r in
+      dlet r2 := carry_mulmod limbwidth_num limbwidth_den s c n idxs q2 v in
+      dlet r3 := carry_mulmod limbwidth_num limbwidth_den s c n idxs r02 r in
+      dlet v4 := addmod limbwidth_num limbwidth_den n v2 v3 in
+      dlet v5 := carrymod limbwidth_num limbwidth_den s c n idxs v4 in
+      dlet r4 := addmod limbwidth_num limbwidth_den n r2 r3 in
+      dlet r5 := carrymod limbwidth_num limbwidth_den s c n idxs r4 in
+          (f6, g6, v5, r5).
+
+    Definition outer_loop_body_hd f g (v r : list Z) :=
+      let '(_,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_hddivstep_aux machine_wordsize data) (1,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
       dlet f2 := word_tc_mul machine_wordsize tc_limbs u1 f in
       dlet f3 := word_tc_mul machine_wordsize tc_limbs v1 g in
       dlet g2 := word_tc_mul machine_wordsize tc_limbs q1 f in

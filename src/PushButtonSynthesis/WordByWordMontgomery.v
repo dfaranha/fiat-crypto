@@ -793,6 +793,32 @@ Section __.
              (forall v, valid v)).
              (* (outer_loop_body_correct weightu sat_limbs)). *)
 
+  Definition outer_loop_body_hd
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_outer_loop_body_hd_gen
+            @ GallinaReify.Reify (machine_wordsize:Z)
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify sat_limbs
+            @ GallinaReify.Reify word_sat_mul_limbs
+            @ GallinaReify.Reify m
+            @ GallinaReify.Reify m')
+         loop_input
+         loop_output.
+
+  Definition souter_loop_body_hd (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "outer_loop_body_hd" outer_loop_body_hd
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " computes the body of the outer loop in BY-inversion (jumpdivstep version)."]%string)
+             (forall v, valid v)).
+             (* (outer_loop_body_hd_correct weightu sat_limbs)). *)
+
   Lemma bounded_by_of_valid x
         (H : valid x)
     : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) (Some bounds) x = true.
@@ -1215,7 +1241,8 @@ Section __.
             ("divstep", wrap_s sdivstep);
             ("sat_from_bytes", wrap_s ssat_from_bytes);
             ("jumpdivstep_precomp", wrap_s sjumpdivstep_precomp);
-            ("outer_loop_body", wrap_s souter_loop_body)].
+            ("outer_loop_body", wrap_s souter_loop_body);
+            ("outer_loop_body_hd", wrap_s souter_loop_body_hd)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 

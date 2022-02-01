@@ -13,6 +13,7 @@ Require Import Crypto.Util.ZUtil.Tactics.PullPush.
 Require Import Crypto.Util.ZUtil.Tactics.SolveTestbit.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.SolveRange.
 
 Require Import Crypto.Util.Decidable.
 
@@ -93,17 +94,21 @@ Module Z.
 
   Lemma twos_complement_mod' a m (Hm : 0 < m) :
     Z.twos_complement m a mod 2 ^ m = a mod 2 ^ m.
-  Proof. unfold Z.twos_complement.
-         destruct_ltb (a mod 2 ^ m) (2 ^ (m - 1)); repeat (pull_Zmod; push_Zmod; rewrite Z.mod_0_l, Z.sub_0_r);
-           try apply Z.mod_mod; apply Z.pow_nonzero; lia. Qed.
+  Proof.
+    unfold Z.twos_complement.
+    destruct_ltb (a mod 2 ^ m) (2 ^ (m - 1)); repeat (pull_Zmod; push_Zmod; rewrite Z.mod_0_l, Z.sub_0_r);
+      try apply Z.mod_mod; apply Z.pow_nonzero; lia.
+  Qed.
 
   Lemma twos_complement_mod_smaller_pow a m m' (Hm : 0 < m' <= m) :
     Z.twos_complement m a mod 2 ^ m' = a mod 2 ^ m'.
-  Proof. unfold Z.twos_complement.
-         destruct_ltb (a mod 2 ^ m) (2 ^ (m - 1)).
-         + apply Z.mod_pow_same_base_smaller; lia.
-         + rewrite <- Zminus_mod_idemp_r, Z.mod_same_pow, Z.sub_0_r by lia.
-           apply Z.mod_pow_same_base_smaller; lia. Qed.
+  Proof.
+    unfold Z.twos_complement.
+    destruct_ltb (a mod 2 ^ m) (2 ^ (m - 1)).
+    + apply Z.mod_pow_same_base_smaller; lia.
+    + rewrite <- Zminus_mod_idemp_r, Z.mod_same_pow, Z.sub_0_r by lia.
+      apply Z.mod_pow_same_base_smaller; lia.
+  Qed.
 
   Lemma twos_complement_odd m a (Hm : 0 < m) : Z.odd (Z.twos_complement m a) = Z.odd a.
   Proof. rewrite <- !Z.bit0_odd; Z.solve_testbit. Qed.
@@ -117,7 +122,8 @@ Module Z.
     unfold Z.twos_complement.
     assert (0 < 2 ^ m) by (apply Z.pow_pos_nonneg; lia).
     assert (2 ^ m = 2 * 2 ^ (m - 1)) by (rewrite Z.pow_mul_base by lia; apply f_equal2; lia).
-    pose proof (Z.mod_pos_bound a (2 ^ m) H); destruct_ltb (a mod 2 ^ m) (2 ^ (m - 1)); lia. Qed.
+    pose proof (Z.mod_pos_bound a (2 ^ m) H); destruct_ltb (a mod 2 ^ m) (2 ^ (m - 1)); lia.
+  Qed.
 
   Hint Resolve twos_complement_bounds : zarith.
 
@@ -127,7 +133,8 @@ Module Z.
     apply Z.twos_complement_spec. lia. split.
     reflexivity.
     assert (2 ^ (m' - 1) <= 2 ^ (m - 1)) by (apply Z.pow_le_mono_r; lia).
-    pose proof twos_complement_bounds m' a. lia. Qed.
+    pose proof twos_complement_bounds m' a. lia.
+  Qed.
 
   Lemma twos_complement_twos_complement_smaller_width a m m' (Hm : 0 < m <= m') :
     Z.twos_complement m (Z.twos_complement m' a) = Z.twos_complement m a.
@@ -143,16 +150,19 @@ Module Z.
   Proof.
     apply twos_complement_spec; try split; try lia; unfold Z.twos_complement.
     destruct_ltb (a mod 2 ^ m) (2 ^ (m - 1));
-      destruct_ltb (b mod 2 ^ m) (2 ^ (m - 1)); repeat (push_Zmod; pull_Zmod; rewrite ?Z.sub_0_r); reflexivity. Qed.
+      destruct_ltb (b mod 2 ^ m) (2 ^ (m - 1)); repeat (push_Zmod; pull_Zmod; rewrite ?Z.sub_0_r); reflexivity.
+  Qed.
 
   Lemma twos_complement_add_weak m a b
         (Hm : 0 < m)
         (Ha : - 2 ^ (m - 2) <= Z.twos_complement m a < 2 ^ (m - 2))
         (Hb : - 2 ^ (m - 2) <= Z.twos_complement m b < 2 ^ (m - 2)) :
     Z.twos_complement m (a + b) = Z.twos_complement m a + Z.twos_complement m b.
-  Proof. destruct (dec (m = 1)); [subst; rewrite Z.pow_neg_r in *; lia|].
-         assert (2 * 2 ^ (m - 2) = 2 ^ (m - 1)) by (rewrite Z.pow_mul_base by lia; apply f_equal2; lia).
-         rewrite twos_complement_add_full; lia. Qed.
+  Proof.
+    destruct (dec (m = 1)); [subst; rewrite Z.pow_neg_r in *; lia|].
+    assert (2 * 2 ^ (m - 2) = 2 ^ (m - 1)) by (rewrite Z.pow_mul_base by lia; apply f_equal2; lia).
+    rewrite twos_complement_add_full; lia.
+  Qed.
 
   Lemma twos_complement_mul_full m a b
         (Hm : 0 < m)
@@ -161,5 +171,16 @@ Module Z.
   Proof.
     apply twos_complement_spec; try split; try lia; unfold Z.twos_complement.
     destruct_ltb (a mod 2 ^ m) (2 ^ (m - 1));
-      destruct_ltb (b mod 2 ^ m) (2 ^ (m - 1)); repeat (push_Zmod; pull_Zmod; rewrite ?Z.sub_0_r); reflexivity. Qed.
+      destruct_ltb (b mod 2 ^ m) (2 ^ (m - 1)); repeat (push_Zmod; pull_Zmod; rewrite ?Z.sub_0_r); reflexivity.
+  Qed.
+
+  Lemma twos_complement_two m (Hm : 2 < m) :
+    Z.twos_complement m 2 = 2.
+  Proof.
+    replace 2 with (1 + 1) by reflexivity.
+    rewrite twos_complement_add_full, twos_complement_one; try lia.
+    rewrite twos_complement_one; Z.solve_range.
+    cbn; replace 2 with (2 ^ 1) by reflexivity. apply Z.pow_lt_mono_r; lia.
+  Qed.
+
 End Z.

@@ -51,6 +51,7 @@ src/Arithmetic/WordByWordMontgomery.v
 src/Arithmetic/BYInv/ArithmeticShiftr.v
 src/Arithmetic/BYInv/BYInv.v
 src/Arithmetic/BYInv/BYInvJump.v
+src/Arithmetic/BYInv/BYInvJumpHd.v
 src/Arithmetic/BYInv/Definitions.v
 src/Arithmetic/BYInv/Divstep.v
 src/Arithmetic/BYInv/EvalLemmas.v
