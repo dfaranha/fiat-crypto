@@ -222,7 +222,7 @@ endef
 
 INVERSION_FUNCTIONS := msat sat_from_bytes
 DIVSTEP_FUNCTIONS := divstep divstep_precomp
-JUMP_DIVSTEP_FUNCTIONS := jumpdivstep_precomp
+JUMP_DIVSTEP_FUNCTIONS := jumpdivstep_precomp jumpdivstep_precomp_hd
 MONTGOMERY_INVERSION := $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body outer_loop_body_hd
 UNSATURATED_SOLINAS_INVERSION := $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body outer_loop_body_hd
 

@@ -1,7 +1,7 @@
 #define MAKE_FN_NAME1(x,y) x ## y
 #define MAKE_FN_NAME(x,y) MAKE_FN_NAME1(x,y)
 
-#define PRECOMP MAKE_FN_NAME(CURVE_DESCRIPTION,_jumpdivstep_precomp)
+#define PRECOMP MAKE_FN_NAME(CURVE_DESCRIPTION,_jumpdivstep_precomp_hd)
 #define MSAT MAKE_FN_NAME(CURVE_DESCRIPTION,_msat)
 #define MUL MAKE_FN_NAME(CURVE_DESCRIPTION,_carry_mul)
 #define OPP MAKE_FN_NAME(CURVE_DESCRIPTION,_opp)
@@ -10,11 +10,7 @@
 
 #define BODY MAKE_FN_NAME(CURVE_DESCRIPTION,_outer_loop_body_hd)
 
-#if LEN_PRIME < 46
-#define ITERATIONS (((49 * LEN_PRIME) + 80) / 17)
-#else
-#define ITERATIONS (((49 * LEN_PRIME) + 57) / 17)
-#endif
+#define ITERATIONS (45907 * LEN_PRIME + 26313) / 19929
 
 #define SAT_LIMBS (((LEN_PRIME - 1) / WORDSIZE) + 2) /* we might need 2 more bits to represent m in twos complement */
 #define BYTES (((LEN_PRIME - 1) / 8) + 1)

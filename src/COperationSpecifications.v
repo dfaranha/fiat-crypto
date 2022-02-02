@@ -430,6 +430,11 @@ Module Solinas.
       :=
         forall f g (r v : list Z), eval f = eval g. (* dummy. this should be the that its iteration yields the inverse *)
 
+    Definition outer_loop_body_hd_correct
+               (outer_loop_body : list Z -> list Z -> list Z -> list Z) : Prop
+      :=
+        forall f g (r v : list Z), eval f = eval g. (* dummy. this should be the that its iteration yields the inverse *)
+
     Section ring.
       Context carry_mul (Hcarry_mul : carry_mul_correct carry_mul)
               add       (Hadd       :       add_correct add)

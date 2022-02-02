@@ -137,6 +137,7 @@ Section __.
   Definition n_bytes := bytes_n s.
 
   Definition iterations bits := if bits <? 46 then (49 * bits + 80) / 17 else (49 * bits + 57) / 17.
+  Definition iterations_hd bits := (45907 * bits + 26313) / 19929.
 
   Definition divstep_precompmod :=
     let bits := (Z.log2 m) + 1 in
@@ -147,6 +148,15 @@ Section __.
   Definition jumpdivstep_precompmod :=
     let bits := (Z.log2 m) + 1 in
     let jump_iterations := ((iterations bits) / (machine_wordsize - 2)) + 1 in
+    let total_iterations := jump_iterations * (machine_wordsize - 2) in
+    let k := (m + 1) / 2 in
+    let precomp := (Z.modexp k total_iterations m) in
+    let RN := (Z.modexp 2 (machine_wordsize * (Z.of_nat n) * (jump_iterations + 1)) m) in
+    (RN * precomp) mod m.
+
+  Definition jumpdivstep_precompmod_hd :=
+    let bits := (Z.log2 m) + 1 in
+    let jump_iterations := ((iterations_hd bits) / (machine_wordsize - 2)) + 1 in
     let total_iterations := jump_iterations * (machine_wordsize - 2) in
     let k := (m + 1) / 2 in
     let precomp := (Z.modexp k total_iterations m) in
@@ -767,6 +777,30 @@ Section __.
              (fun fname => ["The function " ++ fname ++ " returns the precomputed value for the jump-version of Bernstein-Yang-inversion (in montgomery form)."]%string)
              (divstep_precomp_correct machine_wordsize n m valid from_montgomery_res)).
 
+  Definition jumpdivstep_precomp_hd
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_encode_gen
+            @ GallinaReify.Reify (machine_wordsize:Z)
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify m
+            @ GallinaReify.Reify m'
+            @ GallinaReify.Reify jumpdivstep_precompmod_hd)
+         tt
+         (Some bounds).
+
+  Definition sjumpdivstep_precomp_hd (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "jumpdivstep_precomp_hd" jumpdivstep_precomp_hd
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname => ["The function " ++ fname ++ " returns the precomputed value for the (half-delta) jump-version of Bernstein-Yang-inversion (in montgomery form)."]%string)
+             (divstep_precomp_correct machine_wordsize n m valid from_montgomery_res)).
+
   Definition outer_loop_body
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -1241,6 +1275,7 @@ Section __.
             ("divstep", wrap_s sdivstep);
             ("sat_from_bytes", wrap_s ssat_from_bytes);
             ("jumpdivstep_precomp", wrap_s sjumpdivstep_precomp);
+            ("jumpdivstep_precomp_hd", wrap_s sjumpdivstep_precomp_hd);
             ("outer_loop_body", wrap_s souter_loop_body);
             ("outer_loop_body_hd", wrap_s souter_loop_body_hd)].
 
