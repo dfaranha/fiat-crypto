@@ -78,7 +78,7 @@ Theorem tc_mul_correct m na nb nab a b
         (Ha2 : forall z : Z, In z a -> 0 <= z < 2 ^ m)
         (Hb2 : forall z : Z, In z b -> 0 <= z < 2 ^ m)
         (Hab_overflow : - 2 ^ (m * Z.of_nat nab - 1) <=
-                        Z.twos_complement (m * Z.of_nat na) (eval (uweight m) na a) * Z.twos_complement (m * Z.of_nat nb) (eval (uweight m) nb b) <
+                        tc_eval m na a * tc_eval m nb b <
                         2 ^ (m * Z.of_nat nab - 1)) :
   tc_eval m (nab) (tc_mul m na nb nab a b) =
   (tc_eval m na a) * (tc_eval m nb b).
@@ -86,7 +86,7 @@ Proof.
   pose proof (uwprops m Hm).
   pose proof (eval_bound m na a Hm Ha2 Ha).
   pose proof (eval_bound m nb b Hm Hb2 Hb).
-  unfold tc_mul, tc_eval.
+  unfold tc_mul, tc_eval in *.
   rewrite (firstn_eval m (2 * nab)), Rows.mul_partitions, !sat_sign_extend_eval, Partition.eval_partition, Z.twos_complement_mod.
   rewrite Z.mod_small.
   fold (Z.twos_complement_mul_aux (m * na) (m * nb) (m * nab) (eval (uweight m) na a) (eval (uweight m) nb b)).
@@ -101,6 +101,8 @@ Proof.
   apply sat_mul_bounds; distr_length; lia.
 Qed.
 
+Require Import Crypto.Util.ZUtil.Tactics.SolveRange.
+
 Lemma tc_mul_full_length machine_wordsize na nb f g
       (mw0 : 0 < machine_wordsize)
       (Hna : (0 < na)%nat)
@@ -109,6 +111,12 @@ Lemma tc_mul_full_length machine_wordsize na nb f g
       (Hg : length g = nb) :
   length (tc_mul_full machine_wordsize na nb f g) = (na + nb)%nat.
 Proof. unfold tc_mul_full. apply tc_mul_length; lia. Qed.
+
+Lemma tc_eval_bounds m n a
+        (Hm : 0 < m)
+        (Hn : (0 < n)%nat) :
+  - 2 ^ (m * Z.of_nat n - 1) <= tc_eval m n a < 2 ^ (m * Z.of_nat n - 1).
+Proof. unfold tc_eval; apply Z.twos_complement_bounds; nia. Qed.
 
 Theorem tc_mul_full_correct m na nb a b
         (Hm : 0 < m)
@@ -122,11 +130,28 @@ Theorem tc_mul_full_correct m na nb a b
   (tc_eval m na a) * (tc_eval m nb b).
 Proof.
   unfold tc_mul_full; apply tc_mul_correct; try assumption; try lia.
-  pose proof (Z.twos_complement_bounds (m * Z.of_nat na) (eval (uweight m) na a)).
-  pose proof (Z.twos_complement_bounds (m * Z.of_nat nb) (eval (uweight m) nb b)).
+  pose proof (tc_eval_bounds m na a).
+  pose proof (tc_eval_bounds m nb b).
   assert (2 ^ (m * Z.of_nat na - 1) * 2 ^ (m * Z.of_nat nb - 1) < 2 ^ (m * Z.of_nat (na + nb) - 1)) by
       (rewrite <- Z.pow_add_r by nia; apply Z.pow_lt_mono_r; nia).
   nia.
+Qed.
+
+Lemma tc_mul_full_bounds m na nb a b
+        (Hm : 0 < m)
+        (Hna : (0 < na)%nat)
+        (Hnb : (0 < nb)%nat)
+        (Ha : length a = na)
+        (Hb : length b = nb)
+        (Ha2 : forall z : Z, In z a -> 0 <= z < 2 ^ m)
+        (Hb2 : forall z : Z, In z b -> 0 <= z < 2 ^ m) :
+ - 2 ^ (m * Z.of_nat (na + nb) - 1) <= tc_eval m (na + nb) (tc_mul_full m na nb a b) < 2 ^ (m * Z.of_nat (na + nb) - 1).
+Proof.
+  pose proof (tc_eval_bounds m na a).
+  pose proof (tc_eval_bounds m nb b).
+  assert (2 ^ (m * Z.of_nat na - 1) * 2 ^ (m * Z.of_nat nb - 1) < 2 ^ (m * Z.of_nat (na + nb) - 1)) by
+    (rewrite <- Z.pow_add_r by nia; apply Z.pow_lt_mono_r; nia).
+  rewrite tc_mul_full_correct by assumption. nia.
 Qed.
 
 Lemma word_tc_mul_length m n a b
@@ -153,3 +178,15 @@ Proof.
   unfold tc_eval.
   apply f_equal2; [lia|]; rewrite eval_cons, uweight_0, uweight_eval_shift, eval_nil, uweight_1; try reflexivity; lia.
 Qed.
+
+Lemma word_tc_mul_bounds m n a b
+        (Hm : 0 < m)
+        (Hn : (0 < n)%nat)
+        (Ha : 0 <= a < 2 ^ m)
+        (Hb : length b = n)
+        (Hb2 : forall z : Z, In z b -> 0 <= z < 2 ^ m) :
+    - 2 ^ (m * Z.of_nat (1 + n) - 1) <= tc_eval m (1 + n) (word_tc_mul m n a b) < 2 ^ (m * Z.of_nat (1 + n) - 1).
+Proof.
+  unfold word_tc_mul.
+  apply tc_mul_full_bounds; try assumption; try lia.
+  reflexivity. intros. inversion H. subst; assumption. easy. Qed.

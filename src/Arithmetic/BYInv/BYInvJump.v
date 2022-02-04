@@ -1091,33 +1091,33 @@ Module WordByWordMontgomery.
       + rewrite <- (Z.mul_1_r (@eval _ _ _)), <- (Z.pow_1_l n), <- r'_correct by lia.
         push_Zmod; pull_Zmod.
         rewrite Z.pow_mul_l, Z.mul_comm, <- Z.mul_assoc, Z.mul_comm, (Z.mul_comm (r' ^ _)), <- Zmult_mod_idemp_l.
-        rewrite <- eval_from_montgomerymod with (m':=m'), eval_addmod with (r':=r'); t.
+        rewrite <- eval_from_montgomerymod with (m':=m'), eval_addmod with (r':=r') by t.
         push_Zmod.
-        rewrite !eval_mulmod with (r':=r'); t.
+        rewrite !eval_mulmod with (r':=r') by t.
         push_Zmod.
-        rewrite !eval_from_montgomerymod with (r':=r'); t.
+        rewrite !eval_from_montgomerymod with (r':=r') by t.
         push_Zmod.
-        rewrite !eval_twos_complement_word_to_montgomery_no_encode; t.
+        rewrite !eval_twos_complement_word_to_montgomery_no_encode by t.
         pull_Zmod.
         rewrite Z.mul_add_distr_r, <- !Z.mul_assoc, <- Z.pow_mul_l, (Z.mul_comm r'), !Z.mul_assoc, <- Z.mul_add_distr_r, <- Zmult_mod_idemp_r, PullPush.Z.mod_pow_full, r'_correct, Z.pow_1_l, Z.mod_1_l, Z.mul_1_r by lia.
         inversion H7. inversion H5.
-        rewrite !eval_from_montgomerymod with (r':=r'); t.
+        rewrite !eval_from_montgomerymod with (r':=r') by t.
         push_Zmod; pull_Zmod.
         apply f_equal2; lia.
       + rewrite <- (Z.mul_1_r (@eval _ _ _)), <- (Z.pow_1_l n), <- r'_correct by lia.
         push_Zmod; pull_Zmod.
         rewrite Z.pow_mul_l, Z.mul_comm, <- Z.mul_assoc, Z.mul_comm, (Z.mul_comm (r' ^ _)), <- Zmult_mod_idemp_l.
-        rewrite <- eval_from_montgomerymod with (m':=m'), eval_addmod with (r':=r'); t.
+        rewrite <- eval_from_montgomerymod with (m':=m'), eval_addmod with (r':=r') by t.
         push_Zmod.
-        rewrite !eval_mulmod with (r':=r'); t.
+        rewrite !eval_mulmod with (r':=r') by t.
         push_Zmod.
-        rewrite !eval_from_montgomerymod with (r':=r'); t.
+        rewrite !eval_from_montgomerymod with (r':=r') by t.
         push_Zmod.
-        rewrite !eval_twos_complement_word_to_montgomery_no_encode; t.
+        rewrite !eval_twos_complement_word_to_montgomery_no_encode by t.
         pull_Zmod.
         rewrite Z.mul_add_distr_r, <- !Z.mul_assoc, <- Z.pow_mul_l, (Z.mul_comm r'), !Z.mul_assoc, <- Z.mul_add_distr_r, <- Zmult_mod_idemp_r, PullPush.Z.mod_pow_full, r'_correct, Z.pow_1_l, Z.mod_1_l, Z.mul_1_r by lia.
         inversion H7. inversion H5.
-        rewrite !eval_from_montgomerymod with (r':=r'); t.
+        rewrite !eval_from_montgomerymod with (r':=r') by t.
         push_Zmod; pull_Zmod.
         apply f_equal2; lia.
 
@@ -1152,6 +1152,55 @@ Module WordByWordMontgomery.
         unfold tc_eval.
         rewrite eval_nth_default_0 with (n:=sat_limbs) (m:=machine_wordsize), Z.twos_complement_mod, !Z.twos_complement_mod_smaller_pow; assumption || nia.
     Qed.
+Ltac split_pairs :=
+  repeat match goal with
+         | [ |- context[let '(_, _) := ?b in _] ] => let E := fresh in destruct b eqn:E
+         | [ H : context[let '(_, _) := ?b in _] |- _ ] => let E := fresh in destruct b eqn:E
+         | [ H : _ /\ _ |- _ ] => destruct H
+         | [ H : ?a = ?a |- _ ] => clear H
+         | [ H : (?a, ?b) = (?c, ?d) |- _ ] => assert (a = c) by congruence; assert (b = d) by congruence; clear H
+         end; subst.
+
+    Theorem outer_loop_body_f_bounds f g v r
+            (fodd : Z.odd (tc_eval machine_wordsize sat_limbs f) = true)
+            (n1 : (1 < n)%nat)
+            (mw1 : 2 < machine_wordsize)
+            (Hf : length f = sat_limbs)
+            (Hg : length g = sat_limbs)
+
+            (sat_limbs0 : (0 < sat_limbs)%nat)
+            (word_tc_mul_limbs_eq : (word_tc_mul_limbs = 1 + sat_limbs)%nat)
+            (overflow_f : - 2 ^ (machine_wordsize * sat_limbs - 2) <
+                          tc_eval machine_wordsize sat_limbs f <
+                          2 ^ (machine_wordsize * sat_limbs - 2))
+            (overflow_g : - 2 ^ (machine_wordsize * sat_limbs - 2) <
+                          tc_eval machine_wordsize sat_limbs g <
+                          2 ^ (machine_wordsize * sat_limbs - 2))
+            (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize)
+            (Hg2 : forall z, In z g -> 0 <= z < 2^machine_wordsize)
+            (Hr : valid machine_wordsize n m r)
+            (Hv : valid machine_wordsize n m v) :
+      let '(f1,g1,v1,r1) := outer_loop_body f g v r in
+      - 2 ^ (machine_wordsize * sat_limbs - 2) < tc_eval machine_wordsize sat_limbs f1 < 2 ^ (machine_wordsize * sat_limbs - 2).
+    Proof.
+      unfold outer_loop_body.
+      split_pairs.
+      inversion H.
+      rewrite firstn_tc_eval with (n := (1 + length f)%nat).
+      rewrite tc_eval_arithmetic_shiftr.
+      rewrite tc_eval_tc_add.
+      rewrite !word_tc_mul_correct.
+      rewrite tc_eval_word_tc_mul.
+      =
+      let '(_,f1',g1',v1',r1') :=
+          divstep_full_iter m 1
+                            (tc_eval machine_wordsize sat_limbs f)
+                            (tc_eval machine_wordsize sat_limbs g)
+                            (@eval machine_wordsize n (from_montgomerymod machine_wordsize n m m' v) mod m)
+                            (@eval machine_wordsize n (from_montgomerymod machine_wordsize n m m' r) mod m)
+                            (Z.to_nat (machine_wordsize - 2)) in
+      (Z.twos_complement (machine_wordsize * sat_limbs) f1',
+       Z.twos_complement (machine_wordsize * sat_limbs) g1', v1', r1').
   End __.
 End WordByWordMontgomery.
 

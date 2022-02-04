@@ -328,3 +328,27 @@ Proof.
       rewrite IHm, tc_eval_arithmetic_shiftr1 by (try assumption; lia).
       rewrite Z.div_div, Z.pow_mul_base, Z.sub_simpl_r by lia; reflexivity.
 Qed.
+Require Import Crypto.Util.ZUtil.Tactics.SolveRange.
+
+Lemma div_lt_lower_bound a b c : 0 < b -> b * (a + 1) <= c -> a < c / b.
+Proof. intros; enough (a + 1 <= c / b) by lia; apply Z.div_le_lower_bound; assumption. Qed.
+
+Lemma tc_eval_arithmetic_shiftr_bounds machine_wordsize n f k lb ub
+      (Hlb : 0 <= lb)
+      (Hub : 0 <= ub)
+      (Hn : (0 < n)%nat)
+      (Hf : length f = n)
+      (Hk : 0 <= k < machine_wordsize)
+      (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize)
+      (Hf3 : - 2 ^ (k + lb) <= tc_eval machine_wordsize n f < 2 ^ (k + ub))
+  : - 2 ^ lb <= tc_eval machine_wordsize n (arithmetic_shiftr machine_wordsize n f k) < 2 ^ ub.
+Proof.
+  rewrite tc_eval_arithmetic_shiftr by assumption.
+  Z.solve_range.
+  apply Z.div_le_lower_bound. lia.
+  repeat match goal with
+  | |- context[(- ?a) * ?b] => replace ((- a) * b) with (- (a * b)) by ring
+  | |- context[?a * (- ?b)] => replace (a * (- b)) with (- (a * b)) by ring
+         end.
+  Z.solve_range.
+Qed.

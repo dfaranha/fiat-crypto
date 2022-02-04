@@ -55,7 +55,7 @@ Section Z.
   Proof.
     unfold Z.twos_complement_opp', Z.twos_complement_opp.
     destruct (Z_lt_dec m 0).
-    - rewrite !Z.pow_neg_r, !Zmod_0_r by assumption; cbn; rewrite Zmod_0_r; reflexivity.
+    - rewrite !Z.pow_neg_r, !Zmod_0_r by assumption; try reflexivity; try (cbn; rewrite Zmod_0_r; reflexivity).
     - rewrite Z.add_get_carry_full_mod; auto with zarith.
   Qed.
 

@@ -65,8 +65,11 @@ Module Export WordByWordMontgomery.
     snd (divstep_spec
            (Z.twos_complement machine_wordsize d)
            (tc_eval machine_wordsize tc_limbs f)
-           (tc_eval machine_wordsize tc_limbs g)).
+           (tc_eval machine_wordsize tc_limbs g)) /\ (- 2 ^ (machine_wordsize * tc_limbs - 2) <
+                      tc_eval machine_wordsize tc_limbs g1 <
+                      2 ^ (machine_wordsize * tc_limbs - 2)).
   Proof.
+    split.
     set (bw := machine_wordsize * Z.of_nat tc_limbs) in *.
 
     simpl.
@@ -119,6 +122,7 @@ Module Export WordByWordMontgomery.
       destruct (dec (_)); try rewrite tc_eval_zero; try rewrite tc_eval_select;
         replace (machine_wordsize * _) with bw by reflexivity; try lia; destruct (dec (_)); lia.
     - apply tc_add_bounds; repeat (rewrite ?length_tc_opp, ?(length_select tc_limbs), ?length_zero; auto); lia.
+    -
   Qed.
 
   Lemma divstep_d machine_wordsize tc_limbs mont_limbs m d f g v r
