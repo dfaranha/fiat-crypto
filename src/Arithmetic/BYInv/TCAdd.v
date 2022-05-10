@@ -50,11 +50,11 @@ Qed.
 
 Hint Rewrite length_tc_add : length_distr.
 
-Lemma tc_add_bounds machine_wordsize n f g
+Lemma tc_add_in_bounded machine_wordsize n f g
       (mw0 : 0 < machine_wordsize)
       (Hf : length f = n)
       (Hg : length g = n) :
-  forall z, In z (tc_add machine_wordsize n f g) -> 0 <= z < 2 ^ machine_wordsize.
+  in_bounded machine_wordsize (tc_add machine_wordsize n f g).
 Proof.
   pose proof uwprops machine_wordsize mw0.
   intros z Hin; unfold tc_add in *; rewrite Rows.add_partitions in *; auto.
@@ -77,12 +77,8 @@ Lemma tc_eval_tc_add machine_wordsize n f g
       (n0 : (0 < n)%nat)
       (Hf : length f = n)
       (Hg : length g = n)
-      (overflow_f : - 2 ^ (machine_wordsize * n - 2) <
-                    tc_eval machine_wordsize n f <
-                    2 ^ (machine_wordsize * n - 2))
-      (overflow_g : - 2 ^ (machine_wordsize * n - 2) <
-                    tc_eval machine_wordsize n g <
-                    2 ^ (machine_wordsize * n - 2)) :
+      (overflow_f : - 2 ^ (machine_wordsize * n - 2) < tc_eval machine_wordsize n f < 2 ^ (machine_wordsize * n - 2))
+      (overflow_g : - 2 ^ (machine_wordsize * n - 2) < tc_eval machine_wordsize n g < 2 ^ (machine_wordsize * n - 2)) :
   tc_eval machine_wordsize n (tc_add machine_wordsize n f g) =
   tc_eval machine_wordsize n f + tc_eval machine_wordsize n g.
 Proof.
@@ -95,8 +91,7 @@ Lemma tc_eval_tc_add_full machine_wordsize n f g
       (n0 : (0 < n)%nat)
       (Hf : length f = n)
       (Hg : length g = n)
-      (bounds : - 2 ^ (machine_wordsize * n - 1) <
-                    tc_eval machine_wordsize n f + tc_eval machine_wordsize n g <
+      (bounds : - 2 ^ (machine_wordsize * n - 1) < tc_eval machine_wordsize n f + tc_eval machine_wordsize n g <
                     2 ^ (machine_wordsize * n - 1)) :
   tc_eval machine_wordsize n (tc_add machine_wordsize n f g) =
   tc_eval machine_wordsize n f + tc_eval machine_wordsize n g.

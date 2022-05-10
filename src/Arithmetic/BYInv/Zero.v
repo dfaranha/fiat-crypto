@@ -19,8 +19,8 @@ Lemma length_zero n :
   length (zero n) = n.
 Proof. auto with distr_length. Qed.
 
-Lemma eval_zero machine_wordsize n (mw : 0 < machine_wordsize):
-  eval (uweight machine_wordsize) n (zero n) = 0.
+Lemma eval_zero {weight : Z -> nat -> Z} machine_wordsize n :
+  eval (weight machine_wordsize) n (zero n) = 0.
 Proof. apply eval_zeros. Qed.
 
 Lemma tc_eval_zero machine_wordsize n

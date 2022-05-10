@@ -6,6 +6,8 @@ Require Import Crypto.Arithmetic.UniformWeight.
 Require Import Crypto.Arithmetic.Saturated.
 Require Import Crypto.Arithmetic.Core.
 
+Require Import Crypto.Arithmetic.BYInv.Definitions.
+
 Require Import Crypto.Util.ZUtil.Shift.
 
 Import Positional.
@@ -13,9 +15,20 @@ Import Positional.
 Local Open Scope Z_scope.
 Local Coercion Z.of_nat : nat >-> Z.
 
+Lemma in_bounded_tail machine_wordsize a f : in_bounded machine_wordsize (a :: f) -> in_bounded machine_wordsize f.
+Proof.
+  intros. unfold in_bounded in *.
+  intros. apply H. right. assumption.
+Qed.
+
+Lemma in_bounded_head machine_wordsize a f : in_bounded machine_wordsize (a :: f) -> 0 <= a < 2 ^ machine_wordsize.
+Proof.
+  intros H. apply H. left. reflexivity.
+Qed.
+
 Lemma eval_bound machine_wordsize n f
       (mw0 : 0 < machine_wordsize)
-      (Hz : forall z, In z f -> 0 <= z < 2^machine_wordsize)
+      (Hz : in_bounded machine_wordsize f)
       (Hf : length f = n) :
   0 <= eval (uweight machine_wordsize) n f < 2 ^ (machine_wordsize * n).
 Proof.
@@ -33,7 +46,7 @@ Proof.
 Qed.
 
 Lemma eval_testbit machine_wordsize n f m
-      (Hz : forall z, In z f -> 0 <= z < 2^machine_wordsize)
+      (Hz : in_bounded machine_wordsize f)
       (mw0 : 0 < machine_wordsize)
       (Hf : length f = n)
       (Hm : 0 <= m) :
@@ -57,13 +70,13 @@ Proof.
       replace machine_wordsize with (1 * machine_wordsize) at 1 by ring.
       rewrite Div.Z.div_sub, Z.sub_1_r, Z.succ_pred; lia.
       apply Div.Z.div_nonneg; lia.
-      intros; specialize (Hz z); tauto.
+      eapply in_bounded_tail. eassumption.
 Qed.
 
 Lemma eval_nth_default_0 m n f
       (Hm : 0 < m)
       (Hf : length f = n)
-      (Hf2 : forall z : Z, In z f -> 0 <= z < 2 ^ m) :
+      (Hf2 : in_bounded m f) :
   nth_default 0 f 0 = eval (uweight m) n f mod 2 ^ m.
 Proof.
   induction f.

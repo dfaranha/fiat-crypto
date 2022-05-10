@@ -222,9 +222,9 @@ endef
 
 INVERSION_FUNCTIONS := msat sat_from_bytes
 DIVSTEP_FUNCTIONS := divstep divstep_precomp
-JUMP_DIVSTEP_FUNCTIONS := jumpdivstep_precomp jumpdivstep_precomp_hd
-MONTGOMERY_INVERSION := $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body outer_loop_body_hd
-UNSATURATED_SOLINAS_INVERSION := $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS) outer_loop_body outer_loop_body_hd
+JUMP_DIVSTEP_FUNCTIONS := inner_loop inner_loop_hd update_fg update_vr jumpdivstep_precomp jumpdivstep_precomp_hd
+MONTGOMERY_INVERSION := $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS)
+UNSATURATED_SOLINAS_INVERSION := $(INVERSION_FUNCTIONS) $(DIVSTEP_FUNCTIONS) $(JUMP_DIVSTEP_FUNCTIONS)
 
 UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes one relax $(UNSATURATED_SOLINAS_INVERSION)
 FUNCTIONS_FOR_25519 := $(UNSATURATED_SOLINAS_FUNCTIONS) carry_scmul121666

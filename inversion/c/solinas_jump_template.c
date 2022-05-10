@@ -8,7 +8,10 @@
 #define CARRY MAKE_FN_NAME(CURVE_DESCRIPTION,_carry)
 #define SZNZ MAKE_FN_NAME(CURVE_DESCRIPTION,_selectznz)
 
-#define BODY MAKE_FN_NAME(CURVE_DESCRIPTION,_outer_loop_body)
+#define FN_INNER_LOOP MAKE_FN_NAME(CURVE_DESCRIPTION,_inner_loop)
+#define UPDATE_FG MAKE_FN_NAME(CURVE_DESCRIPTION,_update_fg)
+#define UPDATE_VR MAKE_FN_NAME(CURVE_DESCRIPTION,_update_vr)
+/* #define BODY MAKE_FN_NAME(CURVE_DESCRIPTION,_outer_loop_body) */
 
 #if LEN_PRIME < 46
 #define ITERATIONS (((49 * LEN_PRIME) + 80) / 17)
@@ -30,6 +33,7 @@ void inverse(WORD out[LIMBS],  WORD g[SAT_LIMBS]) {
   WORD f1[SAT_LIMBS], f[SAT_LIMBS], g1[SAT_LIMBS];
   WORD v1[LIMBS], v[LIMBS];
   WORD r1[LIMBS], r[LIMBS];
+  WORD *d,*d1,*un,*vn,*qn,*rn;
 
   MSAT(f);
   for (int i = 0; i < LIMBS; i++) r[i] = 0;
@@ -37,14 +41,28 @@ void inverse(WORD out[LIMBS],  WORD g[SAT_LIMBS]) {
 
   for (int j = 0; j < LIMBS; j++) v[j] = 0;
 
+  *d = 1;
+
   for (int i = 0; i < OUTER_LOOP - (OUTER_LOOP % 2); i+=2) {
-    BODY(f1,g1,v1,r1,f,g,v,r);
-    BODY(f,g,v,r,f1,g1,v1,r1);
+    FN_INNER_LOOP(d1,un,vn,qn,rn,*d,f,g);
+    UPDATE_FG(f1,g1,f,g,*un,*vn,*qn,*rn);
+    UPDATE_VR(v1,r1,v,r,*un,*vn,*qn,*rn);
+
+    FN_INNER_LOOP(d,un,vn,qn,rn,*d1,f1,g1);
+    UPDATE_FG(f,g,f1,g1,*un,*vn,*qn,*rn);
+    UPDATE_VR(v,r,v1,r1,*un,*vn,*qn,*rn);
+    /* BODY(f1,g1,v1,r1,f,g,v,r); */
+    /* BODY(f,g,v,r,f1,g1,v1,r1); */
   }
   if (OUTER_LOOP % 2) {
-    BODY(f1,g1,v1,r1,f,g,v,r);
+    FN_INNER_LOOP(d1,un,vn,qn,rn,*d,f,g);
+    UPDATE_FG(f1,g1,f,g,*un,*vn,*qn,*rn);
+    UPDATE_VR(v1,r1,v,r,*un,*vn,*qn,*rn);
+    /* BODY(f1,g1,v1,r1,f,g,v,r); */
+
     for (int k = 0; k < LIMBS; k++) v[k] = v1[k];
     for (int k = 0; k < SAT_LIMBS; k++) f[k] = f1[k];
+    d = d1;
   }
 
   WORD h[LIMBS];

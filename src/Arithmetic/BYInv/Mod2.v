@@ -26,6 +26,10 @@ Local Open Scope Z_scope.
 Lemma mod2_cons a f : mod2 (a :: f) = a mod 2.
 Proof. unfold mod2. now rewrite ListUtil.nth_default_cons. Qed.
 
+Lemma mod2_odd f :
+  mod2 f = Z.b2z (odd f).
+Proof. unfold mod2, odd; rewrite Zmod_odd; now destruct (Z.odd (nth_default 0 f 0)). Qed.
+
 Lemma eval_mod2 machine_wordsize n f
       (Hf : length f = n)
       (Hmw : 0 < machine_wordsize) :
@@ -48,3 +52,6 @@ Lemma tc_eval_mod2 machine_wordsize n f
       (Hf : length f = n) :
   (tc_eval machine_wordsize n f) mod 2 = mod2 f.
 Proof. unfold tc_eval; rewrite Z.twos_complement_mod2, eval_mod2; nia. Qed.
+
+Lemma mod2_dec g : {mod2 g = 0} + {mod2 g = 1}.
+Proof. rewrite mod2_odd. destruct (odd g); [right|left]; reflexivity. Qed.

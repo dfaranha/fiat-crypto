@@ -55,6 +55,7 @@ Import Compilers.API.
 Import COperationSpecifications.Primitives.
 Import COperationSpecifications.Solinas.
 Import BYInversionReificationCache.UnsaturatedSolinas.
+Import Definitions.UnsaturatedSolinas.
 
 Import Associational Positional.
 
@@ -168,7 +169,7 @@ Section __.
     let M := encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c m in
     distribute_balance n s c m_enc_min M.
 
-  Definition m_bits := Z.log2 m + 1. Compute Z.to_nat (((256 - 1) / 32) + 2).
+  Definition m_bits := Z.log2 m + 1.
   Definition sat_limbs := Z.to_nat (((m_bits - 1) / machine_wordsize) + 2). (* the two extra bits are for sign and to store the first addition in divstep which might be twice as big as m *)
   (* Definition sat_limbs := Z.to_nat ((m_bits - 1 + 2) / machine_wordsize). (* the two extra bits are for sign and to store the first addition in divstep which might be twice as big as m *) *)
   Definition sat_upper_bound := 2 ^ (sat_limbs * machine_wordsize) - 1.
@@ -179,31 +180,6 @@ Section __.
     := Partition.partition (weight 8 1) n_bytes sat_upper_bound.
   Definition saturated_bytes_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
     := Some (List.map (fun v => Some r[0 ~> v]%zrange) saturated_bytes_list).
-
-  Definition iterations bits := if bits <? 46 then (49 * bits + 80) / 17 else (49 * bits + 57) / 17.
-  Definition iterations_hd bits := (45907 * bits + 26313) / 19929.
-
-  Definition divstep_precompmod :=
-    let bits := (Z.log2 m) + 1 in
-    let i := iterations bits in
-    let k := (m + 1) / 2 in
-    (Z.modexp k i m).
-
-  Definition jumpdivstep_precompmod :=
-    let bits := (Z.log2 m) + 1 in
-    let jump_iterations := ((iterations bits) / (machine_wordsize - 2)) + 1 in
-    let total_iterations := jump_iterations * (machine_wordsize - 2) in
-    let k := (m + 1) / 2 in
-    let precomp := (Z.modexp k total_iterations m) in
-    precomp mod m.
-
-  Definition jumpdivstep_precompmod_hd :=
-    let bits := (Z.log2 m) + 1 in
-    let jump_iterations := ((iterations_hd bits) / (machine_wordsize - 2)) + 1 in
-    let total_iterations := jump_iterations * (machine_wordsize - 2) in
-    let k := (m + 1) / 2 in
-    let precomp := (Z.modexp k total_iterations m) in
-    precomp mod m.
 
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
@@ -221,6 +197,10 @@ Section __.
   Definition larger_bounds : list (ZRange.type.option.interp base.type.Z)
     := larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
 
+  Local Notation divstep_precompmod := (divstep_precompmod s c).
+  Local Notation jumpdivstep_precompmod := (jumpdivstep_precompmod machine_wordsize s c).
+  Local Notation jumpdivstep_precompmod_hd := (jumpdivstep_precompmod_hd machine_wordsize s c).
+
   Definition divstep_input :=
     (Some r[0~>2^machine_wordsize-1],
      (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
@@ -235,16 +215,53 @@ Section __.
      Some tight_bounds,
      Some tight_bounds)%zrange.
 
-  Definition loop_input :=
-    (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
-     (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
-      (Some tight_bounds,
-       (Some tight_bounds,tt))))%zrange.
+  (* these are for jumpdivstep, if it could be reified (currently too slow) *)
+  (* Definition jump_divstep_input := *)
+  (*   (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs), *)
+  (*    (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs), *)
+  (*     (Some tight_bounds, *)
+  (*      (Some tight_bounds,tt))))%zrange. *)
 
-  Definition loop_output :=
+  (* Definition jump_divstep_output := *)
+  (*   (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs), *)
+  (*    Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs), *)
+  (*    Some tight_bounds, *)
+  (*    Some tight_bounds)%zrange. *)
+
+  Definition inner_loop_input :=
+    (Some r[0~>2^machine_wordsize-1],
+      (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+        (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs), tt)))%zrange.
+
+  Definition inner_loop_output :=
+    (Some r[0 ~> 2^machine_wordsize-1],
+     Some r[0 ~> 2^machine_wordsize-1],
+     Some r[0 ~> 2^machine_wordsize-1],
+     Some r[0 ~> 2^machine_wordsize-1],
+     Some r[0 ~> 2^machine_wordsize-1])%zrange.
+
+  Definition update_fg_input :=
     (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
-     Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
-     Some tight_bounds,
+      (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+        (Some r[0 ~> 2^machine_wordsize-1],
+          (Some r[0 ~> 2^machine_wordsize-1],
+            (Some r[0 ~> 2^machine_wordsize-1],
+              (Some r[0 ~> 2^machine_wordsize-1], tt))))))%zrange.
+
+  Definition update_fg_output :=
+    (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+     Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs))%zrange.
+
+  Definition update_vr_input :=
+    (Some tight_bounds,
+      (Some tight_bounds,
+        (Some r[0 ~> 2^machine_wordsize-1],
+          (Some r[0 ~> 2^machine_wordsize-1],
+            (Some r[0 ~> 2^machine_wordsize-1],
+              (Some r[0 ~> 2^machine_wordsize-1], tt))))))%zrange.
+
+  Definition update_vr_output :=
+    (Some tight_bounds,
      Some tight_bounds)%zrange.
 
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
@@ -769,8 +786,10 @@ Section __.
          true (* subst01 *)
          None (* fancy *)
          possible_values
-         (reified_msat_gen
-            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify m)
+         (reified_partition_gen
+            @ GallinaReify.Reify (machine_wordsize:Z)
+            @ GallinaReify.Reify sat_limbs
+            @ GallinaReify.Reify m)
          tt
          (Some larger_bounds).
 
@@ -789,7 +808,12 @@ Section __.
          None (* fancy *)
          possible_values_no_bit
          (reified_encode_gen
-            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify divstep_precompmod)
+            @ GallinaReify.Reify (Qnum limbwidth)
+            @ GallinaReify.Reify (Z.pos (Qden limbwidth))
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify divstep_precompmod)
          tt
          (Some tight_bounds).
 
@@ -856,9 +880,14 @@ Section __.
          None (* fancy *)
          possible_values_no_bit
          (reified_encode_gen
-            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify jumpdivstep_precompmod)
+            @ GallinaReify.Reify (Qnum limbwidth)
+            @ GallinaReify.Reify (Z.pos (Qden limbwidth))
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify jumpdivstep_precompmod)
          tt
-         (Some bounds).
+         (Some tight_bounds).
 
   Definition sjumpdivstep_precomp (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
@@ -875,9 +904,14 @@ Section __.
          None (* fancy *)
          possible_values_no_bit
          (reified_encode_gen
-            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify jumpdivstep_precompmod_hd)
+            @ GallinaReify.Reify (Qnum limbwidth)
+            @ GallinaReify.Reify (Z.pos (Qden limbwidth))
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify jumpdivstep_precompmod_hd)
          tt
-         (Some bounds).
+         (Some tight_bounds).
 
   Definition sjumpdivstep_precomp_hd (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
@@ -888,12 +922,98 @@ Section __.
              (fun fname => ["The function " ++ fname ++ " returns the precomputed value for the (half-delta) jump-version of Bernstein-Yang-inversion (in montgomery form)."]%string)
              (divstep_precomp_correct weightf n m tight_bounds)).
 
-  Definition outer_loop_body
+  Definition inner_loop
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          None (* fancy *)
          possible_values
-         (reified_outer_loop_body_gen
+         (reified_inner_loop_gen
+            @ GallinaReify.Reify (machine_wordsize:Z))
+         (inner_loop_input)
+         (inner_loop_output).
+
+  Definition sinner_loop (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "inner_loop" inner_loop
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " computes a inner_loop."]%string)
+             (inner_loop_correct weightu sat_limbs)).
+
+  Definition inner_loop_hd
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_inner_loop_hd_gen
+            @ GallinaReify.Reify (machine_wordsize:Z))
+         (inner_loop_input)
+         (inner_loop_output).
+
+  Definition sinner_loop_hd (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "inner_loop_hd" inner_loop_hd
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " computes a inner_loop_hd."]%string)
+             (inner_loop_hd_correct weightu sat_limbs)).
+
+  Definition update_fg
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_update_fg_gen
+            @ GallinaReify.Reify (machine_wordsize:Z)
+            @ GallinaReify.Reify sat_limbs
+            @ GallinaReify.Reify word_sat_mul_limbs)
+         (update_fg_input)
+         (update_fg_output).
+
+  Definition supdate_fg (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "update_fg" update_fg
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " computes a update_fg."]%string)
+             (update_fg_correct weightu sat_limbs)).
+
+  Definition update_vr
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_update_vr_gen
+            @ GallinaReify.Reify (Qnum limbwidth:Z)
+            @ GallinaReify.Reify (Z.pos (Qden limbwidth))
+            @ GallinaReify.Reify (machine_wordsize:Z)
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n
+            @ GallinaReify.Reify idxs
+            @ GallinaReify.Reify balance)
+         (update_vr_input)
+         (update_vr_output).
+
+  Definition supdate_vr (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "update_vr" update_vr
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " computes a update_vr."]%string)
+             (update_vr_correct weightu sat_limbs)).
+
+  (* not currently viable
+  Definition jump_divstep
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_jump_divstep_gen
             @ GallinaReify.Reify (Qnum limbwidth)
             @ GallinaReify.Reify (Z.pos (Qden limbwidth))
             @ GallinaReify.Reify (machine_wordsize:Z)
@@ -904,24 +1024,24 @@ Section __.
             @ GallinaReify.Reify word_sat_mul_limbs
             @ GallinaReify.Reify idxs
             @ GallinaReify.Reify balance)
-         loop_input
-         loop_output.
+         jump_divstep_input
+         jump_divstep_output.
 
-  Definition souter_loop_body (prefix : string)
+  Definition sjump_divstep (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "outer_loop_body" outer_loop_body
+          machine_wordsize prefix "jump_divstep" jump_divstep
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " computes the body of the outer loop in BY-inversion (jumpdivstep version)."]%string)
-             (outer_loop_body_correct weightu sat_limbs)).
+             (jump_divstep_correct weightu sat_limbs)).
 
-  Definition outer_loop_body_hd
+  Definition jump_divstep_hd
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          None (* fancy *)
          possible_values
-         (reified_outer_loop_body_hd_gen
+         (reified_jump_divstep_hd_gen
             @ GallinaReify.Reify (Qnum limbwidth)
             @ GallinaReify.Reify (Z.pos (Qden limbwidth))
             @ GallinaReify.Reify (machine_wordsize:Z)
@@ -932,17 +1052,18 @@ Section __.
             @ GallinaReify.Reify word_sat_mul_limbs
             @ GallinaReify.Reify idxs
             @ GallinaReify.Reify balance)
-         loop_input
-         loop_output.
+         jump_divstep_input
+         jump_divstep_output.
 
-  Definition souter_loop_body_hd (prefix : string)
+  Definition sjump_divstep_hd (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "outer_loop_body_hd" outer_loop_body_hd
+          machine_wordsize prefix "jump_divstep_hd" jump_divstep_hd
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " computes the body of the outer loop in BY-inversion (half-delta jumpdivstep version)."]%string)
-             (outer_loop_body_hd_correct weightu sat_limbs)).
+             (jump_divstep_hd_correct weightu sat_limbs)).
+  *)
 
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
@@ -1237,8 +1358,12 @@ Section __.
             ("sat_from_bytes", wrap_s ssat_from_bytes);
             ("jumpdivstep_precomp", wrap_s sjumpdivstep_precomp);
             ("jumpdivstep_precomp_hd", wrap_s sjumpdivstep_precomp_hd);
-            ("outer_loop_body", wrap_s souter_loop_body);
-            ("outer_loop_body_hd", wrap_s souter_loop_body_hd)].
+            ("inner_loop", wrap_s sinner_loop);
+            ("inner_loop_hd", wrap_s sinner_loop_hd);
+            ("update_fg", wrap_s supdate_fg);
+            ("update_vr", wrap_s supdate_vr)].
+            (* ("jump_divstep", wrap_s sjump_divstep); *)
+            (* ("jump_divstep_hd", wrap_s sjump_divstep_hd)]. *)
 
     Definition valid_names : string
       := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions) ++ ", or 'carry_scmul' followed by a decimal literal".

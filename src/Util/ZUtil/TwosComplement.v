@@ -110,6 +110,20 @@ Module Z.
       apply Z.mod_pow_same_base_smaller; lia.
   Qed.
 
+  Lemma twos_complement_smaller_bitwidth a m m' (Hm : 0 < m <= m') (Ha : - 2 ^ (m - 1) <= Z.twos_complement m' a < 2 ^ (m - 1)) :
+    Z.twos_complement m' a = Z.twos_complement m a.
+  Proof.
+    symmetry. apply Z.twos_complement_spec; [lia|].
+    split; [|assumption].
+    unfold Z.twos_complement.
+    destruct (_ <? _) eqn:E.
+    - rewrite Modulo.Z.mod_pow_same_base_smaller by lia; reflexivity.
+    - rewrite <- Zminus_mod_idemp_r.
+      rewrite Modulo.Z.mod_same_pow by lia.
+      rewrite Z.sub_0_r, Modulo.Z.mod_pow_same_base_smaller by lia.
+      reflexivity.
+  Qed.
+
   Lemma twos_complement_odd m a (Hm : 0 < m) : Z.odd (Z.twos_complement m a) = Z.odd a.
   Proof. rewrite <- !Z.bit0_odd; Z.solve_testbit. Qed.
 
@@ -183,4 +197,16 @@ Module Z.
     cbn; replace 2 with (2 ^ 1) by reflexivity. apply Z.pow_lt_mono_r; lia.
   Qed.
 
+  Lemma twos_complement_small a mw
+        (mw_bounds : 0 <= mw)
+        (a_bounds : 0 <= a < 2 ^ (mw - 1)) :
+    Z.twos_complement mw a = a.
+  Proof.
+    destruct a_bounds as [lb ub].
+    assert (2 ^ (mw - 1) < 2 ^ mw).
+    { apply Z.pow_lt_mono_r; lia. }
+    unfold Z.twos_complement.
+    rewrite Z.mod_small by lia.
+    apply Z.ltb_lt in ub. rewrite ub. reflexivity.
+  Qed.
 End Z.

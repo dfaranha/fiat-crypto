@@ -37,7 +37,7 @@ Require Import Crypto.Util.ZUtil.Tactics.SolveTestbit.
 
 Lemma eval_arithmetic_shiftr1 machine_wordsize n f
       (mw0 : 0 < machine_wordsize)
-      (Hz : forall z, In z f -> 0 <= z < 2^machine_wordsize)
+      (Hz : in_bounded machine_wordsize f)
       (Hf : length f = n) :
   eval (uweight machine_wordsize) n (arithmetic_shiftr1 machine_wordsize n f) =
   Z.arithmetic_shiftr1 (machine_wordsize * n) (eval (uweight machine_wordsize) n f).
@@ -88,11 +88,11 @@ Proof.
         rewrite Z.land_comm, Z.land_pow2_small; [lia|].
         split.
         apply Div.Z.div_nonneg; [|lia].
-        apply eval_bound; [lia| |]. intros; apply Hz; simpl; tauto. reflexivity.
+        apply eval_bound; [lia| |]. eapply in_bounded_tail. eassumption. reflexivity.
 
         apply Div.Z.div_lt_upper_bound'; try lia.
         rewrite Z.mul_comm, Pow.Z.pow_mul_base by nia. rewrite <- Z.add_assoc, Z.add_0_r.
-        apply eval_bound; try assumption. intros; apply Hz; simpl; tauto. reflexivity.
+        apply eval_bound; try assumption. eapply in_bounded_tail. eassumption. reflexivity.
 
         rewrite Zmod_odd.
         specialize (Hz z (or_introl eq_refl)).
@@ -123,8 +123,8 @@ Proof.
         rewrite !Div.Z.div_add_l'; lia.
         set (x := Pos.of_succ_nat (length f)).
         set (a := machine_wordsize). apply Div.Z.div_nonneg; nia.
-      * intros; apply Hz; simpl in *; tauto.
-      * intros; apply Hz; simpl in *; tauto.
+      * eapply in_bounded_tail; eassumption.
+      * eapply in_bounded_tail; eassumption.
       * unfold arithmetic_shiftr1.
         replace (S (length f) - 1)%nat with (length f) by lia.
         rewrite ListUtil.nth_default_cons_S.
@@ -136,7 +136,7 @@ Qed.
 Lemma tc_eval_arithmetic_shiftr1 machine_wordsize n f
       (mw0 : 0 < machine_wordsize)
       (n0 : (0 < n)%nat)
-      (Hz : forall z, In z f -> 0 <= z < 2^machine_wordsize)
+      (Hz : in_bounded machine_wordsize f)
       (Hf : length f = n) :
   tc_eval machine_wordsize n (arithmetic_shiftr1 machine_wordsize n f) =
   (tc_eval machine_wordsize n f) / 2.
@@ -149,7 +149,7 @@ Lemma arithmetic_shiftr_0 machine_wordsize n f
       (Hm : 0 < machine_wordsize)
       (Hn : (0 < n)%nat)
       (Hf : length f = n)
-      (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize) :
+      (Hf2 : in_bounded machine_wordsize f) :
   arithmetic_shiftr machine_wordsize n f 0 = f.
 Proof.
   assert (0 < 2 ^ machine_wordsize) by (apply Z.pow_pos_nonneg; lia).
@@ -166,7 +166,7 @@ Qed.
 
 Lemma arithmetic_shiftr_1 machine_wordsize n f
       (Hm : 0 < machine_wordsize)
-      (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize) :
+      (Hf2 : in_bounded machine_wordsize f) :
   arithmetic_shiftr machine_wordsize n f 1 =
   arithmetic_shiftr1 machine_wordsize n f.
 Proof.
@@ -181,7 +181,7 @@ Lemma arithmetic_shiftr_arithmetic_shiftr1 machine_wordsize n (f : list Z) k
       (Hn : (0 < n)%nat)
       (Hf : length f = n)
       (Hk : 0 <= k < machine_wordsize)
-      (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize) :
+      (Hf2 : in_bounded machine_wordsize f) :
   arithmetic_shiftr machine_wordsize n
                         (arithmetic_shiftr1 machine_wordsize n f) k =
   arithmetic_shiftr machine_wordsize n f (k + 1).
@@ -229,10 +229,10 @@ Lemma iter_arithmetic_shiftr_S m n f k :
   = iter_arithmetic_shiftr1 m n (arithmetic_shiftr1 m n f) k.
 Proof. destruct k; reflexivity. Qed.
 
-Lemma arithmetic_shiftr_bound m n f
+Lemma arithmetic_shiftr1_in_bounded m n f
       (Hm : 0 <= m)
-      (Hf : forall z, In z f -> 0 <= z < 2 ^ m) :
-  forall y, In y (arithmetic_shiftr1 m n f) -> 0 <= y < 2 ^ m.
+      (Hf : in_bounded m f) :
+  in_bounded m (arithmetic_shiftr1 m n f).
 Proof.
   intros y H; unfold arithmetic_shiftr1 in H.
   assert (H1 : 0 <= 0 < 2 ^ m) by Z.solve_range.
@@ -256,7 +256,7 @@ Lemma arithmetic_shiftr_iter_arithmetic_shiftr1 machine_wordsize n f k
       (Hn : (0 < n)%nat)
       (Hf : length f = n)
       (Hk : 0 <= k < machine_wordsize)
-      (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize) :
+      (Hf2 : in_bounded machine_wordsize f) :
   arithmetic_shiftr machine_wordsize n f k
   = iter_arithmetic_shiftr1 machine_wordsize n f (Z.abs_nat k).
 Proof.
@@ -270,7 +270,7 @@ Proof.
       rewrite arithmetic_shiftr_1 by (try assumption; lia). reflexivity.
     + specialize (IHm (arithmetic_shiftr1 machine_wordsize n f)
                       (arithmetic_shiftr1_length machine_wordsize n f Hn Hf)
-                      (arithmetic_shiftr_bound machine_wordsize n f Hm Hf2)
+                      (arithmetic_shiftr1_in_bounded machine_wordsize n f Hm Hf2)
                       (k - 1) ltac:(lia) ltac:(lia)).
       rewrite iter_arithmetic_shiftr_S, <- IHm.
       rewrite arithmetic_shiftr_arithmetic_shiftr1
@@ -284,14 +284,14 @@ Lemma arithmetic_shiftr_length machine_wordsize n f k
   length (arithmetic_shiftr machine_wordsize n f k) = n.
 Proof. unfold arithmetic_shiftr; autorewrite with distr_length; lia. Qed.
 
-Lemma arithmetic_shiftr_bounds machine_wordsize n f k
+Lemma arithmetic_shiftr_in_bounded machine_wordsize n f k
       (Hn : (0 < n)%nat)
       (Hk : 0 <= k)
       (Hm : 0 < machine_wordsize)
-      (Hf : forall z, In z f -> 0 <= z < 2^machine_wordsize) :
-  forall y, In y (arithmetic_shiftr machine_wordsize n f k) -> 0 <= y < 2 ^ machine_wordsize.
+      (Hf : in_bounded machine_wordsize f) :
+  in_bounded machine_wordsize (arithmetic_shiftr machine_wordsize n f k).
 Proof.
-  intros. unfold arithmetic_shiftr in H.
+  intros y H. unfold arithmetic_shiftr in H.
   assert (H1 : 0 <= 0 < 2 ^ machine_wordsize) by Z.solve_range.
   apply in_app_iff in H; destruct H; simpl in H.
   - apply in_map_iff in H; destruct H as [i [H H0] ]; rewrite <- H.
@@ -307,7 +307,7 @@ Lemma tc_eval_arithmetic_shiftr machine_wordsize n f k
       (Hn : (0 < n)%nat)
       (Hf : length f = n)
       (Hk : 0 <= k < machine_wordsize)
-      (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize) :
+      (Hf2 : in_bounded machine_wordsize f) :
   tc_eval machine_wordsize n
                        (arithmetic_shiftr machine_wordsize n f k) =
   tc_eval machine_wordsize n f / (2 ^ k).
@@ -322,13 +322,12 @@ Proof.
     + rewrite iter_arithmetic_shiftr_S.
       specialize (IHm (arithmetic_shiftr1 machine_wordsize n f)
                       (arithmetic_shiftr1_length machine_wordsize n f Hn Hf)
-                      (arithmetic_shiftr_bound machine_wordsize n f Hm Hf2)
+                      (arithmetic_shiftr1_in_bounded machine_wordsize n f Hm Hf2)
                       (k - 1) ltac:(lia) ltac:(lia)).
       assert (0 < 2 ^ (k - 1)) by (apply Z.pow_pos_nonneg; lia).
       rewrite IHm, tc_eval_arithmetic_shiftr1 by (try assumption; lia).
       rewrite Z.div_div, Z.pow_mul_base, Z.sub_simpl_r by lia; reflexivity.
 Qed.
-Require Import Crypto.Util.ZUtil.Tactics.SolveRange.
 
 Lemma div_lt_lower_bound a b c : 0 < b -> b * (a + 1) <= c -> a < c / b.
 Proof. intros; enough (a + 1 <= c / b) by lia; apply Z.div_le_lower_bound; assumption. Qed.
@@ -339,16 +338,79 @@ Lemma tc_eval_arithmetic_shiftr_bounds machine_wordsize n f k lb ub
       (Hn : (0 < n)%nat)
       (Hf : length f = n)
       (Hk : 0 <= k < machine_wordsize)
-      (Hf2 : forall z, In z f -> 0 <= z < 2^machine_wordsize)
-      (Hf3 : - 2 ^ (k + lb) <= tc_eval machine_wordsize n f < 2 ^ (k + ub))
-  : - 2 ^ lb <= tc_eval machine_wordsize n (arithmetic_shiftr machine_wordsize n f k) < 2 ^ ub.
+      (Hf2 : in_bounded machine_wordsize f)
+      (Hf3 : - 2 ^ (k + lb) <= tc_eval machine_wordsize n f < 2 ^ (k + ub)) :
+  - 2 ^ lb <= tc_eval machine_wordsize n (arithmetic_shiftr machine_wordsize n f k) < 2 ^ ub.
 Proof.
   rewrite tc_eval_arithmetic_shiftr by assumption.
   Z.solve_range.
-  apply Z.div_le_lower_bound. lia.
   repeat match goal with
   | |- context[(- ?a) * ?b] => replace ((- a) * b) with (- (a * b)) by ring
   | |- context[?a * (- ?b)] => replace (a * (- b)) with (- (a * b)) by ring
          end.
   Z.solve_range.
+Qed.
+
+Lemma tc_eval_arithmetic_shiftr_weak_bounds machine_wordsize n f k K
+      (Hn : (0 < n)%nat)
+      (Hf : length f = n)
+      (Hk : 0 <= k < machine_wordsize)
+      (Hf2 : in_bounded machine_wordsize f)
+      (Hf3 : - K < tc_eval machine_wordsize n f < K) :
+  - K < tc_eval machine_wordsize n (arithmetic_shiftr machine_wordsize n f k) < K.
+Proof.
+  rewrite tc_eval_arithmetic_shiftr by assumption.
+  Z.solve_range.
+  apply div_lt_lower_bound. lia. nia.
+Qed.
+
+Lemma eval_div_pow2 machine_wordsize n f k
+  (Hk : 0 <= k <= machine_wordsize)
+  (Hf : length f = n)
+  (Hf2 : (2 ^ k | nth_default 0 f 0)) :
+    (2 ^ k | eval (uweight machine_wordsize) n f).
+Proof.
+  destruct f.
+  - rewrite eval_nil. apply Z.divide_0_r.
+  - cbn in Hf2. subst; simpl in *. rewrite eval_cons by reflexivity.
+    rewrite uweight_eval_shift by lia.
+    rewrite uweight_0.
+    rewrite uweight_eq_alt'.
+    rewrite Z.mul_1_r.
+    rewrite Z.mul_1_l.
+    apply Z.divide_add_r. assumption.
+    apply Z.divide_mul_l.
+    apply Divide.Z.divide_pow_le. assumption.
+Qed.
+
+Lemma twos_complement_div_pow2 m a k
+  (Hk : 0 <= k <= m) :
+  (2 ^ k | a) -> (2 ^ k | Z.twos_complement m a).
+Proof.
+  intros.
+  unfold Z.twos_complement.
+  destruct (a mod 2 ^ m <? 2 ^ (m - 1)) eqn:E.
+  rewrite Zmod_eq_full.
+  apply Z.divide_sub_r. assumption.
+  apply Z.divide_mul_r.
+  apply Divide.Z.divide_pow_le. assumption.
+  apply Z.pow_nonzero. lia. lia.
+  apply Z.divide_sub_r.
+  rewrite Zmod_eq_full.
+  apply Z.divide_sub_r. assumption.
+  apply Z.divide_mul_r.
+  apply Divide.Z.divide_pow_le. assumption. lia.
+  apply Divide.Z.divide_pow_le. assumption.
+Qed.
+
+Lemma tc_eval_div_pow2 machine_wordsize n f k
+      (Hk : 0 <= k <= machine_wordsize)
+      (Hn : (0 < n)%nat)
+      (Hf : length f = n)
+      (Hf2 : (2 ^ k | nth_default 0 f 0)) :
+  (2 ^ k | tc_eval machine_wordsize n f).
+Proof.
+  unfold tc_eval.
+  apply twos_complement_div_pow2. nia.
+  apply eval_div_pow2; assumption.
 Qed.

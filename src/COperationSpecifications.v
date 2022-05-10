@@ -425,13 +425,30 @@ Module Solinas.
          (* /\ list_Z_bounded_by tight_bounds v1 *)
         (* /\ list_Z_bounded_by tight_bounds r1 *)).
 
-    Definition outer_loop_body_correct
-               (outer_loop_body : list Z -> list Z -> list Z -> list Z) : Prop
+    (* the following are dummies. they should refer to the correctness theorem of by_inv_jump *)
+    Definition inner_loop_correct
+               (inner_loop : list Z -> list Z -> Z * Z * Z * Z * Z) : Prop
+      := forall f g, eval f = eval g.
+
+    Definition inner_loop_hd_correct
+               (inner_loop : list Z -> list Z -> Z * Z * Z * Z * Z) : Prop
+      := forall f g, eval f = eval g.
+
+    Definition update_fg_correct
+               (update_fg : list Z -> list Z -> Z -> Z -> Z -> Z -> list Z * list Z)
+      := forall f g (u v q r : Z), eval f = eval g.
+
+    Definition update_vr_correct
+               (update_fg : list Z -> list Z -> Z -> Z -> Z -> Z -> list Z * list Z)
+      := forall f g (u v q r : Z), eval f = eval g.
+
+    Definition jump_divstep_correct
+               (jump_divstep : list Z -> list Z -> list Z -> list Z) : Prop
       :=
         forall f g (r v : list Z), eval f = eval g. (* dummy. this should be the that its iteration yields the inverse *)
 
-    Definition outer_loop_body_hd_correct
-               (outer_loop_body : list Z -> list Z -> list Z -> list Z) : Prop
+    Definition jump_divstep_hd_correct
+               (jump_divstep : list Z -> list Z -> list Z -> list Z) : Prop
       :=
         forall f g (r v : list Z), eval f = eval g. (* dummy. this should be the that its iteration yields the inverse *)
 

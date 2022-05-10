@@ -9,7 +9,10 @@ Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.Freeze.
 Require Import Crypto.Arithmetic.ModOps.
 
+Require Import Crypto.Arithmetic.BYInv.Divstep.
+
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.ModExp.
 
 Require Import Crypto.Util.LetIn.
 
@@ -19,6 +22,9 @@ Import Crypto.Util.ZUtil.Notations.
 
 Local Open Scope Z.
 
+Definition in_bounded machine_wordsize f :=
+  forall z, In z f -> 0 <= z < 2 ^ machine_wordsize.
+
 (*Evaluation function for multi-limb integers in twos complement *)
 Definition tc_eval machine_wordsize n f :=
   Z.twos_complement (machine_wordsize * Z.of_nat n) (eval (uweight machine_wordsize) n f).
@@ -26,6 +32,12 @@ Definition tc_eval machine_wordsize n f :=
 (*Saturated addition of multi-limb integers *)
 Definition tc_add machine_wordsize n f g :=
   fst (Rows.add (uweight machine_wordsize) n f g).
+
+Definition odd f :=
+  Z.odd (nth_default 0 f 0).
+
+Definition even f :=
+  Z.even (nth_default 0 f 0).
 
 (*Saturated (logical) right shift *)
 Definition shiftr machine_wordsize n f :=
@@ -66,7 +78,7 @@ Definition ones m n :=
 (* Definition ones m n := *)
 (*   repeat (Z.ones m) n. *)
 
-Definition tc_is_neg machine_wordsize n a :=
+Definition tc_sign_bit machine_wordsize n a :=
   nth_default 0 a (n - 1) >> (machine_wordsize - 1).
 
 (*Multiplication of saturated multi-limb integers *)
@@ -94,7 +106,7 @@ Definition tc_word_bits machine_wordsize a :=
   nth_default 0 a 0 mod 2^(machine_wordsize - 2).
 
 Definition tc_mod_word machine_wordsize n a :=
-  let cond := tc_is_neg machine_wordsize n a in
+  let cond := tc_sign_bit machine_wordsize n a in
   let a' := select cond a (tc_opp machine_wordsize n a) in
   let t := (nth_default 0 a' 0) in
   let res := Z.zselect cond t (Z.twos_complement_opp machine_wordsize t) in res.
@@ -190,7 +202,7 @@ Module Export WordByWordMontgomery.
       let v'':= addmod machine_wordsize sat_limbs m v' v' in
       dlet r' := select cond r (oppmod machine_wordsize sat_limbs m v) in
       dlet g0 := mod2 g' in
-      let d'' := (fst (Z.add_get_carry_full (2^machine_wordsize) d' 1)) in
+      let d'' := (d' + 1) mod 2 ^ machine_wordsize in (* (fst (Z.add_get_carry_full (2^machine_wordsize) d' 1)) in *)
       dlet f'' := select g0 (zero n) f' in
       let g'' := arithmetic_shiftr1 machine_wordsize n (tc_add machine_wordsize n g' f'') in
       dlet v''' := select g0 (zero sat_limbs) v' in
@@ -199,6 +211,12 @@ Module Export WordByWordMontgomery.
 
     Definition divstep d f g v r :=
       divstep_aux (d, f, g, v, r).
+
+    Definition divstep_precompmod :=
+      let bits := (Z.log2 m) + 1 in
+      let i := iterations bits in
+      let k := (m + 1) / 2 in
+      (Z.modexp k i m).
 
     (* Converts a wordsized integer to montgomery domain *)
     Definition twosc_word_to_montgomery a :=
@@ -225,8 +243,8 @@ Module Export WordByWordMontgomery.
       let a''_opp := oppmod machine_wordsize n m a'' in
       select cond a'' a''_opp.
 
-    Definition outer_loop_body f g (v r : list Z) :=
-      let '(_,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_divstep_aux machine_wordsize data) (1,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+    Definition jump_divstep_aux '(d, f, g, v, r) :=
+      let '(d1,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_divstep_aux machine_wordsize data) (d,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
       dlet f2 := word_tc_mul machine_wordsize sat_limbs u1 f in
       dlet f3 := word_tc_mul machine_wordsize sat_limbs v1 g in
       dlet g2 := word_tc_mul machine_wordsize sat_limbs q1 f in
@@ -247,9 +265,46 @@ Module Export WordByWordMontgomery.
       dlet r3 := mulmod machine_wordsize n m m' r02 r in
       dlet v4 := addmod machine_wordsize n m v2 v3 in
       dlet r4 := addmod machine_wordsize n m r2 r3 in
-                                                (f6, g6, v4, r4).
-    Definition outer_loop_body_hd f g (v r : list Z) :=
-      let '(_,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_hddivstep_aux machine_wordsize data) (1,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+    (d1,f6, g6, v4, r4).
+
+    Definition inner_loop d f g :=
+      let '(d1,_,_,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_divstep_aux machine_wordsize data) (d,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+      (d1, u1, v1, q1, r1).
+
+    Definition inner_loop_hd d f g :=
+      let '(d1,_,_,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_hddivstep_aux machine_wordsize data) (d,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+      (d1, u1, v1, q1, r1).
+
+    Definition update_fg f g u1 v1 q1 r1 :=
+      dlet f2 := word_tc_mul machine_wordsize sat_limbs u1 f in
+      dlet f3 := word_tc_mul machine_wordsize sat_limbs v1 g in
+      dlet g2 := word_tc_mul machine_wordsize sat_limbs q1 f in
+      dlet g3 := word_tc_mul machine_wordsize sat_limbs r1 g in
+      dlet f4 := tc_add machine_wordsize word_tc_mul_limbs f2 f3 in
+      dlet g4 := tc_add machine_wordsize word_tc_mul_limbs g2 g3 in
+      dlet f5 := arithmetic_shiftr machine_wordsize word_tc_mul_limbs f4 (machine_wordsize - 2) in
+      dlet g5 := arithmetic_shiftr machine_wordsize word_tc_mul_limbs g4 (machine_wordsize - 2) in
+      dlet f6 := firstn sat_limbs f5 in
+      dlet g6 := firstn sat_limbs g5 in
+    (f6, g6).
+
+    Definition update_vr v r u1 v1 q1 r1 :=
+      dlet u2 := twos_complement_word_to_montgomery_no_encode u1 in
+      dlet v02 := twos_complement_word_to_montgomery_no_encode v1 in
+      dlet q2 := twos_complement_word_to_montgomery_no_encode q1 in
+      dlet r02 := twos_complement_word_to_montgomery_no_encode r1 in
+      dlet v2 := mulmod machine_wordsize n m m' u2 v in
+      dlet v3 := mulmod machine_wordsize n m m' v02 r in
+      dlet r2 := mulmod machine_wordsize n m m' q2 v in
+      dlet r3 := mulmod machine_wordsize n m m' r02 r in
+      dlet v4 := addmod machine_wordsize n m v2 v3 in
+      dlet r4 := addmod machine_wordsize n m r2 r3 in
+    (v4, r4).
+
+    Definition jump_divstep d f g v r := jump_divstep_aux (d, f, g, v, r).
+
+    Definition jump_divstep_hd d f g (v r : list Z) :=
+      let '(d1,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_hddivstep_aux machine_wordsize data) (d,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
       dlet f2 := word_tc_mul machine_wordsize sat_limbs u1 f in
       dlet f3 := word_tc_mul machine_wordsize sat_limbs v1 g in
       dlet g2 := word_tc_mul machine_wordsize sat_limbs q1 f in
@@ -270,7 +325,41 @@ Module Export WordByWordMontgomery.
       dlet r3 := mulmod machine_wordsize n m m' r02 r in
       dlet v4 := addmod machine_wordsize n m v2 v3 in
       dlet r4 := addmod machine_wordsize n m r2 r3 in
-          (f6, g6, v4, r4).
+    (d1, f6, g6, v4, r4).
+
+    Definition jumpdivstep_precompmod :=
+      let bits := (Z.log2 m) + 1 in
+      let jump_its := jump_iterations bits machine_wordsize in
+      let total_iterations := jump_its * (machine_wordsize - 2) in
+      let k := (m + 1) / 2 in
+      let precomp := (Z.modexp k total_iterations m) in
+      let RN := (Z.modexp 2 (machine_wordsize * (Z.of_nat n) * (jump_its + 1)) m) in
+      (RN * precomp) mod m.
+
+    Definition partition_precomp :=
+      Partition.partition (uweight machine_wordsize) n jumpdivstep_precompmod.
+
+    Definition by_inv_jump g :=
+      let bits := (Z.log2 m) + 1 in
+      let msat := Partition.partition (uweight machine_wordsize) sat_limbs m in
+      let jump_its := jump_iterations bits machine_wordsize in
+      let total_iterations := jump_its * (machine_wordsize - 2) in
+      let pc := partition_precomp in
+      let '(_, fm, _, vm, _) := fold_left (fun data i => jump_divstep_aux data) (seq 0 (Z.to_nat jump_its))
+                                          (1,msat,g,zero n,one n) in
+      let sign := tc_sign_bit machine_wordsize sat_limbs fm in
+      let inv := mulmod machine_wordsize n m m' pc vm in
+      let inv := select sign inv (oppmod machine_wordsize n m inv) in
+      inv.
+
+    Definition jumpdivstep_precompmod_hd :=
+      let bits := (Z.log2 m) + 1 in
+      let jump_its := ((iterations_hd bits) / (machine_wordsize - 2)) + 1 in
+      let total_iterations := jump_its * (machine_wordsize - 2) in
+      let k := (m + 1) / 2 in
+      let precomp := (Z.modexp k total_iterations m) in
+      let RN := (Z.modexp 2 (machine_wordsize * (Z.of_nat n) * (jump_its + 1)) m) in
+      (RN * precomp) mod m.
   End __.
 
 End WordByWordMontgomery.
@@ -292,6 +381,7 @@ Module UnsaturatedSolinas.
             (word_tc_mul_limbs : nat)
             (idxs : list nat)
             (balance : list Z).
+    Notation m := (s - Associational.eval c).
 
     Definition divstep_aux (data : Z * (list Z) * (list Z) * (list Z) * (list Z)) :=
       let '(d,f,g,v,r) := data in
@@ -305,16 +395,22 @@ Module UnsaturatedSolinas.
       dlet oppv := oppmod limbwidth_num limbwidth_den n balance v in
       dlet r' := select cond r (carrymod limbwidth_num limbwidth_den s c n idxs oppv) in
       dlet g0 := mod2 g' in
-      let d'' := (fst (Z.add_get_carry_full (2^machine_wordsize) d' 1)) in
+      let d'' := (d' + 1) mod 2 ^ machine_wordsize in (* (fst (Z.add_get_carry_full (2^machine_wordsize) d' 1)) in *)
       dlet f'' := select g0 (zero tc_limbs) f' in
       let g'' := arithmetic_shiftr1 machine_wordsize tc_limbs (tc_add machine_wordsize tc_limbs g' f'') in
-      dlet v'''' := select g0 (zeromod limbwidth_num limbwidth_den s c n) v' in
+      dlet v'''' := select g0 (zero n) v' in
       let r'' := addmod limbwidth_num limbwidth_den n r' v'''' in
       dlet r''' := carrymod limbwidth_num limbwidth_den s c n idxs r'' in
       (d'',f',g'',v''',r''').
 
     Definition divstep d f g v r :=
       divstep_aux (d, f, g, v, r).
+
+    Definition divstep_precompmod :=
+      let bits := (Z.log2 m) + 1 in
+      let i := iterations bits in
+      let k := (m + 1) / 2 in
+      (Z.modexp k i m).
 
     Definition word_to_solina a :=
       dlet cond := Z.twos_complement_neg machine_wordsize a in
@@ -325,8 +421,8 @@ Module UnsaturatedSolinas.
       dlet a_opp_enc_opp_carry := carrymod limbwidth_num limbwidth_den s c n idxs a_opp_enc_opp in
       dlet res := select cond a_enc a_opp_enc_opp_carry in res.
 
-    Definition outer_loop_body f g (v r : list Z) :=
-      let '(_,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_divstep_aux machine_wordsize data) (1,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+    Definition jump_divstep_aux '(d, f, g, v, r) :=
+      let '(d1,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_divstep_aux machine_wordsize data) (d,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
       dlet f2 := word_tc_mul machine_wordsize tc_limbs u1 f in
       dlet f3 := word_tc_mul machine_wordsize tc_limbs v1 g in
       dlet g2 := word_tc_mul machine_wordsize tc_limbs q1 f in
@@ -349,10 +445,48 @@ Module UnsaturatedSolinas.
       dlet v5 := carrymod limbwidth_num limbwidth_den s c n idxs v4 in
       dlet r4 := addmod limbwidth_num limbwidth_den n r2 r3 in
       dlet r5 := carrymod limbwidth_num limbwidth_den s c n idxs r4 in
-          (f6, g6, v5, r5).
+    (d1, f6, g6, v5, r5).
 
-    Definition outer_loop_body_hd f g (v r : list Z) :=
-      let '(_,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_hddivstep_aux machine_wordsize data) (1,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+    Definition inner_loop d f g :=
+      let '(d1,_,_,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_divstep_aux machine_wordsize data) (d,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+      (d1, u1, v1, q1, r1).
+
+    Definition inner_loop_hd d f g :=
+      let '(d1,_,_,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_hddivstep_aux machine_wordsize data) (d,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+      (d1, u1, v1, q1, r1).
+
+    Definition update_fg f g u1 v1 q1 r1 :=
+      dlet f2 := word_tc_mul machine_wordsize tc_limbs u1 f in
+      dlet f3 := word_tc_mul machine_wordsize tc_limbs v1 g in
+      dlet g2 := word_tc_mul machine_wordsize tc_limbs q1 f in
+      dlet g3 := word_tc_mul machine_wordsize tc_limbs r1 g in
+      dlet f4 := tc_add machine_wordsize word_tc_mul_limbs f2 f3 in
+      dlet g4 := tc_add machine_wordsize word_tc_mul_limbs g2 g3 in
+      dlet f5 := arithmetic_shiftr machine_wordsize word_tc_mul_limbs f4 (machine_wordsize - 2) in
+      dlet g5 := arithmetic_shiftr machine_wordsize word_tc_mul_limbs g4 (machine_wordsize - 2) in
+      dlet f6 := firstn tc_limbs f5 in
+      dlet g6 := firstn tc_limbs g5 in
+    (f6, g6).
+
+    Definition update_vr v r u1 v1 q1 r1 :=
+      dlet u2 := word_to_solina u1 in
+      dlet v02 := word_to_solina v1 in
+      dlet q2 := word_to_solina q1 in
+      dlet r02 := word_to_solina r1 in
+      dlet v2 := carry_mulmod limbwidth_num limbwidth_den s c n idxs u2 v in
+      dlet v3 := carry_mulmod limbwidth_num limbwidth_den s c n idxs v02 r in
+      dlet r2 := carry_mulmod limbwidth_num limbwidth_den s c n idxs q2 v in
+      dlet r3 := carry_mulmod limbwidth_num limbwidth_den s c n idxs r02 r in
+      dlet v4 := addmod limbwidth_num limbwidth_den n v2 v3 in
+      dlet v5 := carrymod limbwidth_num limbwidth_den s c n idxs v4 in
+      dlet r4 := addmod limbwidth_num limbwidth_den n r2 r3 in
+      dlet r5 := carrymod limbwidth_num limbwidth_den s c n idxs r4 in
+    (v5, r5).
+
+    Definition jump_divstep d f g v r := jump_divstep_aux (d, f, g, v, r).
+
+    Definition jump_divstep_hd d f g (v r : list Z) :=
+      let '(d1,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_hddivstep_aux machine_wordsize data) (d,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
       dlet f2 := word_tc_mul machine_wordsize tc_limbs u1 f in
       dlet f3 := word_tc_mul machine_wordsize tc_limbs v1 g in
       dlet g2 := word_tc_mul machine_wordsize tc_limbs q1 f in
@@ -375,8 +509,39 @@ Module UnsaturatedSolinas.
       dlet v5 := carrymod limbwidth_num limbwidth_den s c n idxs v4 in
       dlet r4 := addmod limbwidth_num limbwidth_den n r2 r3 in
       dlet r5 := carrymod limbwidth_num limbwidth_den s c n idxs r4 in
-          (f6, g6, v5, r5).
+    (d1, f6, g6, v5, r5).
 
+    Definition jumpdivstep_precompmod :=
+      let bits := (Z.log2 m) + 1 in
+      let jump_its := jump_iterations bits machine_wordsize in
+      let total_iterations := jump_its * (machine_wordsize - 2) in
+      let k := (m + 1) / 2 in
+      let precomp := (Z.modexp k total_iterations m) in
+      precomp mod m.
+
+    Definition partition_precomp :=
+      Partition.partition (uweight machine_wordsize) n jumpdivstep_precompmod.
+
+    Definition by_inv_jump g :=
+      let bits := (Z.log2 m) + 1 in
+      let msat := Partition.partition (uweight machine_wordsize) tc_limbs m in
+      let jump_its := jump_iterations bits machine_wordsize in
+      let total_iterations := jump_its * (machine_wordsize - 2) in
+      let pc := partition_precomp in
+      let '(_, fm, _, vm, _) := fold_left (fun data i => jump_divstep_aux data) (seq 0 (Z.to_nat jump_its))
+                                          (1,msat,g,zero n,one n) in
+      let sign := tc_sign_bit machine_wordsize tc_limbs fm in
+      let inv := carry_mulmod limbwidth_num limbwidth_den s c n idxs pc vm in
+      let inv := select sign inv (oppmod limbwidth_num limbwidth_den n balance inv) in
+      inv.
+
+    Definition jumpdivstep_precompmod_hd :=
+      let bits := (Z.log2 m) + 1 in
+      let jump_its := ((iterations_hd bits) / (machine_wordsize - 2)) + 1 in
+      let total_iterations := jump_its * (machine_wordsize - 2) in
+      let k := (m + 1) / 2 in
+      let precomp := (Z.modexp k total_iterations m) in
+      precomp mod m.
   End __.
 
 End UnsaturatedSolinas.

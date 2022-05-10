@@ -20,6 +20,7 @@ Require Import Crypto.Util.ZUtil.TwosComplementOpp.
 Require Import Crypto.Util.ZUtil.Land.
 Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.Decidable.
 
 Import Positional.
 Import Crypto.Util.ZUtil.Notations.
@@ -111,7 +112,35 @@ Lemma tc_eval_tc_opp machine_wordsize n f
       (n0 : (0 < n)%nat)
       (Hz : forall z, In z f -> 0 <= z < 2^machine_wordsize)
       (Hf : length f = n)
-      (corner_case : tc_eval machine_wordsize n f <> - 2 ^ (machine_wordsize * n - 1)):
+      (f_bounds : tc_eval machine_wordsize n f <> - 2 ^ (machine_wordsize * n - 1)):
   tc_eval machine_wordsize n (tc_opp machine_wordsize n f) =
   - tc_eval machine_wordsize n f.
-Proof. assert (0 < Z.of_nat n) by lia; unfold tc_eval in *; rewrite eval_tc_opp, Z.twos_complement_mod, twos_complement_zopp; try tauto; nia. Qed.
+Proof.
+  assert (0 < Z.of_nat n) by lia; unfold tc_eval in *.
+  rewrite eval_tc_opp, Z.twos_complement_mod, Z.twos_complement_zopp; try tauto; nia.
+Qed.
+
+Lemma tc_eval_tc_opp_alt machine_wordsize n f
+      (mw0 : 0 < machine_wordsize)
+      (n0 : (0 < n)%nat)
+      (Hz : forall z, In z f -> 0 <= z < 2^machine_wordsize)
+      (Hf : length f = n)
+      (f_bounds : tc_eval machine_wordsize n f = - 2 ^ (machine_wordsize * n - 1)):
+  tc_eval machine_wordsize n (tc_opp machine_wordsize n f) = tc_eval machine_wordsize n f.
+Proof.
+  assert (0 < Z.of_nat n) by lia; unfold tc_eval in *.
+  rewrite eval_tc_opp, Z.twos_complement_mod, Z.twos_complement_zopp2; try tauto; nia.
+Qed.
+
+Lemma tc_eval_tc_opp_bounds machine_wordsize n f K
+      (mw0 : 0 < machine_wordsize)
+      (n0 : (0 < n)%nat)
+      (Hz : forall z, In z f -> 0 <= z < 2^machine_wordsize)
+      (Hf : length f = n)
+      (f_bounds : - K < tc_eval machine_wordsize n f < K) :
+  - K < tc_eval machine_wordsize n (tc_opp machine_wordsize n f) < K.
+Proof.
+  destruct (dec (tc_eval machine_wordsize n f = - 2 ^ (machine_wordsize * n - 1))).
+  - rewrite tc_eval_tc_opp_alt; assumption.
+  - rewrite tc_eval_tc_opp; try assumption; lia.
+Qed.
