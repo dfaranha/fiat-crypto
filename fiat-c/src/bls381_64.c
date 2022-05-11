@@ -4099,12 +4099,12 @@ static void fiat_bls381_divstep(uint64_t* out1, uint64_t out2[7], uint64_t out3[
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 static void fiat_bls381_divstep_precomp(uint64_t out1[6]) {
-  out1[0] = UINT64_C(0xfd739b0681e705ff);
-  out1[1] = UINT64_C(0xc39603efabac9511);
-  out1[2] = UINT64_C(0x348cb300b20d9ac0);
-  out1[3] = UINT64_C(0x51c556786a97bc9e);
-  out1[4] = UINT64_C(0x5a31eba337ac8a84);
-  out1[5] = UINT64_C(0x11c6d15bba1175d);
+  out1[0] = UINT64_C(0x8000000000000);
+  out1[1] = 0x0;
+  out1[2] = 0x0;
+  out1[3] = 0x0;
+  out1[4] = 0x0;
+  out1[5] = 0x0;
 }
 
 /*
@@ -11336,12 +11336,12 @@ static void fiat_bls381_update_vr(uint64_t out1[6], uint64_t out2[6], const uint
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 static void fiat_bls381_jumpdivstep_precomp(uint64_t out1[6]) {
-  out1[0] = UINT64_C(0xa554ec93a179026a);
-  out1[1] = UINT64_C(0xd51b63ec53de5d7a);
-  out1[2] = UINT64_C(0x531cc8d0c286934);
-  out1[3] = UINT64_C(0xe0ecf13529bf29df);
-  out1[4] = UINT64_C(0x3b73591cfa6dee6d);
-  out1[5] = UINT64_C(0x97fd4c51c80a332);
+  out1[0] = UINT64_C(0x89017a03d2de426e);
+  out1[1] = UINT64_C(0x4334300a33da7490);
+  out1[2] = UINT64_C(0xf2f4240afd63d3b1);
+  out1[3] = UINT64_C(0x47bd4b28fd23a644);
+  out1[4] = UINT64_C(0xbe06bd335a8ef30a);
+  out1[5] = UINT64_C(0x59f868cec641c4b);
 }
 
 /*
@@ -11355,10 +11355,10 @@ static void fiat_bls381_jumpdivstep_precomp(uint64_t out1[6]) {
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 static void fiat_bls381_jumpdivstep_precomp_hd(uint64_t out1[6]) {
-  out1[0] = UINT64_C(0x6382ce59e60cc146);
-  out1[1] = UINT64_C(0x969775ad9cfadea6);
-  out1[2] = UINT64_C(0xeae381ee6ee952f3);
-  out1[3] = UINT64_C(0x9e1e7059705d7a8b);
-  out1[4] = UINT64_C(0xce70d65b82bd97de);
-  out1[5] = UINT64_C(0x86145a8c0962a1e);
+  out1[0] = UINT64_C(0xf659aebd9bb24f06);
+  out1[1] = UINT64_C(0xcd8fbbe746df76a7);
+  out1[2] = UINT64_C(0x19c852f58613265b);
+  out1[3] = UINT64_C(0x149cd62a7db29df3);
+  out1[4] = UINT64_C(0xa5d9054903b450c8);
+  out1[5] = UINT64_C(0x17d89ba75ed8610f);
 }

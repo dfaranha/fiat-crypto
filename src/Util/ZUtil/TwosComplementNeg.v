@@ -7,7 +7,7 @@ Require Import Crypto.Util.ZUtil.TwosComplement.
 
 Local Open Scope Z_scope.
 
-Section Z.
+Module Z.
 
   Lemma twos_complement_neg_spec m a
         (mw0 : 0 < m) :

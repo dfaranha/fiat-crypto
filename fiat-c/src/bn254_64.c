@@ -2367,10 +2367,10 @@ static void fiat_bn254_divstep(uint64_t* out1, uint64_t out2[5], uint64_t out3[5
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 static void fiat_bn254_divstep_precomp(uint64_t out1[4]) {
-  out1[0] = UINT64_C(0x2cc949ef116919ab);
-  out1[1] = UINT64_C(0x28458e64314882cd);
-  out1[2] = UINT64_C(0x6a8fee6691a9f3c5);
-  out1[3] = UINT64_C(0x192d56d36e6153aa);
+  out1[0] = UINT64_C(0x200000000);
+  out1[1] = 0x0;
+  out1[2] = 0x0;
+  out1[3] = 0x0;
 }
 
 /*
@@ -7458,10 +7458,10 @@ static void fiat_bn254_update_vr(uint64_t out1[4], uint64_t out2[4], const uint6
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 static void fiat_bn254_jumpdivstep_precomp(uint64_t out1[4]) {
-  out1[0] = UINT64_C(0x532750726007dfd6);
-  out1[1] = UINT64_C(0x31945da2e50548fe);
-  out1[2] = UINT64_C(0x69c4d68cf2c66a6a);
-  out1[3] = UINT64_C(0x17b663402931abfd);
+  out1[0] = UINT64_C(0xe9405a05a3ec7932);
+  out1[1] = UINT64_C(0x264972d2b5cf7520);
+  out1[2] = UINT64_C(0xd2ddf4fb82fa5cae);
+  out1[3] = UINT64_C(0x1df18edf580e32ef);
 }
 
 /*
@@ -7475,8 +7475,8 @@ static void fiat_bn254_jumpdivstep_precomp(uint64_t out1[4]) {
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 static void fiat_bn254_jumpdivstep_precomp_hd(uint64_t out1[4]) {
-  out1[0] = UINT64_C(0x1354df3f1d4c2247);
-  out1[1] = UINT64_C(0x580663cd8cc791e7);
-  out1[2] = UINT64_C(0x22276966f83228d1);
-  out1[3] = UINT64_C(0x24528bf6a7f97ed6);
+  out1[0] = UINT64_C(0x929991fbc9cd1a0e);
+  out1[1] = UINT64_C(0x9ecae4e410b44210);
+  out1[2] = UINT64_C(0x5593b2f36be1c00a);
+  out1[3] = UINT64_C(0xf189257891714f4);
 }

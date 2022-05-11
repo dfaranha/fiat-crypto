@@ -5739,14 +5739,14 @@ static void fiat_secp256k1_divstep(uint32_t* out1, uint32_t out2[9], uint32_t ou
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
 static void fiat_secp256k1_divstep_precomp(uint32_t out1[8]) {
-  out1[0] = UINT32_C(0x880bdf7f);
-  out1[1] = UINT32_C(0xb7111e04);
-  out1[2] = UINT32_C(0xb01acfe6);
-  out1[3] = UINT32_C(0x86a88aa7);
-  out1[4] = UINT32_C(0x15264400);
-  out1[5] = UINT32_C(0x7be48be5);
-  out1[6] = UINT32_C(0x2904238c);
-  out1[7] = UINT32_C(0xc1a22f88);
+  out1[0] = UINT32_C(0x8000000);
+  out1[1] = 0x0;
+  out1[2] = 0x0;
+  out1[3] = 0x0;
+  out1[4] = 0x0;
+  out1[5] = 0x0;
+  out1[6] = 0x0;
+  out1[7] = 0x0;
 }
 
 /*
@@ -14434,14 +14434,14 @@ static void fiat_secp256k1_update_vr(uint32_t out1[8], uint32_t out2[8], const u
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
 static void fiat_secp256k1_jumpdivstep_precomp(uint32_t out1[8]) {
-  out1[0] = UINT32_C(0x81f7e0e7);
-  out1[1] = UINT32_C(0xfbc9ef0e);
-  out1[2] = UINT32_C(0x153d158);
-  out1[3] = UINT32_C(0xb303cd67);
-  out1[4] = UINT32_C(0x6e0e0c4b);
-  out1[5] = UINT32_C(0x4d5b85fd);
-  out1[6] = UINT32_C(0x5b7e42f1);
-  out1[7] = UINT32_C(0xc622c5a9);
+  out1[0] = UINT32_C(0xc48c8afb);
+  out1[1] = UINT32_C(0xe502666f);
+  out1[2] = UINT32_C(0x91c3d7cb);
+  out1[3] = UINT32_C(0x121e095d);
+  out1[4] = UINT32_C(0x2e3db814);
+  out1[5] = UINT32_C(0x30077e42);
+  out1[6] = UINT32_C(0x1be4d4f4);
+  out1[7] = UINT32_C(0xa1670faf);
 }
 
 /*
@@ -14455,12 +14455,12 @@ static void fiat_secp256k1_jumpdivstep_precomp(uint32_t out1[8]) {
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
 static void fiat_secp256k1_jumpdivstep_precomp_hd(uint32_t out1[8]) {
-  out1[0] = UINT32_C(0x5308b546);
-  out1[1] = UINT32_C(0x610439bc);
-  out1[2] = UINT32_C(0x3241ffcb);
-  out1[3] = UINT32_C(0xdbe8050d);
-  out1[4] = UINT32_C(0xa0c2113c);
-  out1[5] = UINT32_C(0xe063c022);
-  out1[6] = UINT32_C(0xaa250e6d);
-  out1[7] = UINT32_C(0x69a31db6);
+  out1[0] = UINT32_C(0x1734d92c);
+  out1[1] = UINT32_C(0x75aab184);
+  out1[2] = UINT32_C(0xf7701add);
+  out1[3] = UINT32_C(0x13420144);
+  out1[4] = UINT32_C(0xe84ba82e);
+  out1[5] = UINT32_C(0xa1e3b264);
+  out1[6] = UINT32_C(0xfd90c052);
+  out1[7] = UINT32_C(0x5f85a069);
 }

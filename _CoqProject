@@ -56,9 +56,12 @@ src/Arithmetic/BYInv/Definitions.v
 src/Arithmetic/BYInv/Divstep.v
 src/Arithmetic/BYInv/EvalLemmas.v
 src/Arithmetic/BYInv/Firstn.v
+src/Arithmetic/BYInv/Hints.v
 src/Arithmetic/BYInv/Mod2.v
 src/Arithmetic/BYInv/One.v
 src/Arithmetic/BYInv/Ones.v
+src/Arithmetic/BYInv/Partition.v
+src/Arithmetic/BYInv/Ref.v
 src/Arithmetic/BYInv/Select.v
 src/Arithmetic/BYInv/Shiftr.v
 src/Arithmetic/BYInv/TCAdd.v
@@ -66,6 +69,8 @@ src/Arithmetic/BYInv/TCMul.v
 src/Arithmetic/BYInv/TCOpp.v
 src/Arithmetic/BYInv/TCSignBit.v
 src/Arithmetic/BYInv/TCSignExtend.v
+src/Arithmetic/BYInv/UnsaturatedSolinas.v
+src/Arithmetic/BYInv/WordByWordMontgomery.v
 src/Arithmetic/BYInv/Zero.v
 src/Arithmetic/BarrettReduction/Generalized.v
 src/Arithmetic/BarrettReduction/HAC.v

@@ -70,3 +70,10 @@ Proof.
   erewrite Z.twos_complement_smaller_bitwidth with (m':= m * Z.of_nat n) (m:= m * Z.of_nat k); [|nia|assumption].
   rewrite Z.twos_complement_twos_complement_smaller_width by lia. reflexivity.
 Qed.
+
+Lemma firstn_length_le n (f : list Z) :
+  (n <= length f)%nat ->
+  length (firstn n f) = n.
+Proof.
+  intros. rewrite firstn_length, Nat.min_l; auto.
+Qed.

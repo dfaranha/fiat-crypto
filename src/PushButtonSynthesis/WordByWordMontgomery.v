@@ -155,7 +155,7 @@ Section __.
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
   Local Notation larger_saturated_bounds := (Primitives.saturated_bounds sat_limbs machine_wordsize).
 
-  Local Notation divstep_precompmod := (divstep_precompmod m).
+  Local Notation divstep_precompmod := (divstep_precompmod machine_wordsize n m).
   Local Notation jumpdivstep_precompmod := (jumpdivstep_precompmod machine_wordsize n m).
   Local Notation jumpdivstep_precompmod_hd := (jumpdivstep_precompmod_hd machine_wordsize n m).
 
@@ -731,8 +731,8 @@ Section __.
          possible_values
          (reified_divstep_gen
             @ GallinaReify.Reify (machine_wordsize:Z)
-            @ GallinaReify.Reify sat_limbs
             @ GallinaReify.Reify n
+            @ GallinaReify.Reify sat_limbs
             @ GallinaReify.Reify m)
          (divstep_input)
          (divstep_output).

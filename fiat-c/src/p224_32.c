@@ -4115,13 +4115,13 @@ static void fiat_p224_divstep(uint32_t* out1, uint32_t out2[8], uint32_t out3[8]
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
 static void fiat_p224_divstep_precomp(uint32_t out1[7]) {
-  out1[0] = 0x1;
-  out1[1] = UINT32_C(0xfd000000);
-  out1[2] = UINT32_C(0x4ffffff);
-  out1[3] = UINT32_C(0xfe7fffff);
-  out1[4] = UINT32_C(0xff7fffff);
-  out1[5] = UINT32_C(0x27fffff);
-  out1[6] = UINT32_C(0xfd000000);
+  out1[0] = UINT32_C(0x800000);
+  out1[1] = 0x0;
+  out1[2] = 0x0;
+  out1[3] = 0x0;
+  out1[4] = 0x0;
+  out1[5] = 0x0;
+  out1[6] = 0x0;
 }
 
 /*
@@ -10783,13 +10783,13 @@ static void fiat_p224_update_vr(uint32_t out1[7], uint32_t out2[7], const uint32
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
 static void fiat_p224_jumpdivstep_precomp(uint32_t out1[7]) {
-  out1[0] = UINT32_C(0x8c09fffa);
-  out1[1] = UINT32_C(0x4222e005);
-  out1[2] = UINT32_C(0x2f6beffb);
-  out1[3] = UINT32_C(0xabc2600a);
-  out1[4] = UINT32_C(0x6513ff6);
-  out1[5] = UINT32_C(0x215b008);
-  out1[6] = UINT32_C(0x4c756ff9);
+  out1[0] = UINT32_C(0x5473efda);
+  out1[1] = UINT32_C(0xca6ce021);
+  out1[2] = UINT32_C(0x1c946fe2);
+  out1[3] = UINT32_C(0xc4f33040);
+  out1[4] = UINT32_C(0xf7abcfc7);
+  out1[5] = UINT32_C(0x699fe030);
+  out1[6] = UINT32_C(0x874befd4);
 }
 
 /*
@@ -10803,11 +10803,11 @@ static void fiat_p224_jumpdivstep_precomp(uint32_t out1[7]) {
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
 static void fiat_p224_jumpdivstep_precomp_hd(uint32_t out1[7]) {
-  out1[0] = UINT32_C(0x3ca7a0);
-  out1[1] = UINT32_C(0xffc73170);
-  out1[2] = UINT32_C(0x31ceef);
-  out1[3] = UINT32_C(0xff9a7930);
-  out1[4] = UINT32_C(0x5d759f);
-  out1[5] = UINT32_C(0xffabc3b0);
-  out1[6] = UINT32_C(0x45ff3f);
+  out1[0] = UINT32_C(0x1849dc0);
+  out1[1] = UINT32_C(0xfea6eaa0);
+  out1[2] = UINT32_C(0x123543f);
+  out1[3] = UINT32_C(0xfd7bbe30);
+  out1[4] = UINT32_C(0x24395df);
+  out1[5] = UINT32_C(0xfe10a140);
+  out1[6] = UINT32_C(0x1ab2a1f);
 }

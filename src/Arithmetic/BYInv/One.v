@@ -7,11 +7,37 @@ Require Import Crypto.Arithmetic.BYInv.Definitions.
 Require Import Crypto.Arithmetic.UniformWeight.
 Require Import Crypto.Arithmetic.Saturated.
 Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.Partition.
 
 Import Positional.
 Import Crypto.Util.ZUtil.Notations.
 
 Local Open Scope Z_scope.
+
+Lemma partition_1 machine_wordsize n : (0 < machine_wordsize) -> (0 < n)%nat -> Partition.partition (uweight machine_wordsize) n 1 = one n.
+Proof.
+  destruct n.
+  - lia.
+  - induction n.
+    + unfold Partition.partition; intros.
+      simpl.
+      rewrite !uweight_eq_alt', Z.mul_0_r, Z.pow_0_r, Z.div_1_r, Z.mul_1_r, Z.mod_1_l.
+      reflexivity.
+      apply Z.pow_gt_1. lia. assumption.
+    + intros.
+      assert (1 < uweight machine_wordsize (S n)).
+      { rewrite uweight_eq_alt'. apply Z.pow_gt_1; nia. }
+      assert (1 < uweight machine_wordsize (S (S n))).
+      { rewrite uweight_eq_alt'. apply Z.pow_gt_1; nia. }
+      rewrite partition_step, Z.mod_small, Z.div_1_l.
+      rewrite IHn.
+      unfold one.
+      simpl. rewrite Nat.sub_0_r.
+      all: try lia.
+      unfold zeros.
+      rewrite <- repeat_cons.
+      reflexivity.
+Qed.
 
 Lemma length_one n (Hn : (0 < n)%nat) :
   length (one n) = n.

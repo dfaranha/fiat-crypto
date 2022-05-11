@@ -73,7 +73,7 @@ int main() {
   srand(seed);
   printf("seed: %i\n", seed);
 
-  for (int j = 0; j < 10000; j++) {
+  for (int j = 0; j < 2; j++) {
     int i;
     for (i = 0; i < BYTES; i++) {
       a[i] = rand() % 256;
@@ -82,11 +82,10 @@ int main() {
 
     SAT_FROM_BYTES(g,a);
     FROM_BYTES(g1,a);
-    TO_MONTGOMERY(g2,g1);
 
     inverse(out,g);
 
-    MUL(res,out,g2);
+    MUL(res,out,g1);
     FROM_MONTGOMERY(out,res);
     TO_BYTES(a,out);
 

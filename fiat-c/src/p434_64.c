@@ -5066,13 +5066,13 @@ static void fiat_p434_divstep(uint64_t* out1, uint64_t out2[8], uint64_t out3[8]
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 static void fiat_p434_divstep_precomp(uint64_t out1[7]) {
-  out1[0] = UINT64_C(0x4f2a7d708eb8ef73);
-  out1[1] = UINT64_C(0x276ce69e3c8f533e);
-  out1[2] = UINT64_C(0x89ca2943143d1f7b);
-  out1[3] = UINT64_C(0x149373a6c14e6266);
-  out1[4] = UINT64_C(0x5d976ca56ce18d7e);
-  out1[5] = UINT64_C(0x90450ddc3d78b799);
-  out1[6] = UINT64_C(0x17c9cb6341c6e);
+  out1[0] = 0x0;
+  out1[1] = UINT32_C(0x4000000);
+  out1[2] = 0x0;
+  out1[3] = 0x0;
+  out1[4] = 0x0;
+  out1[5] = 0x0;
+  out1[6] = 0x0;
 }
 
 /*
@@ -13562,13 +13562,13 @@ static void fiat_p434_update_vr(uint64_t out1[7], uint64_t out2[7], const uint64
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 static void fiat_p434_jumpdivstep_precomp(uint64_t out1[7]) {
-  out1[0] = UINT64_C(0xccaf6e216fefbcb);
-  out1[1] = UINT64_C(0x1581d2c2e6b45f3d);
-  out1[2] = UINT64_C(0x2d8bf392c225ac70);
-  out1[3] = UINT64_C(0xb99e6c2aa0bd22e);
-  out1[4] = UINT64_C(0x3cf237dbad0ab586);
-  out1[5] = UINT64_C(0xaff7316eb9537c06);
-  out1[6] = UINT64_C(0x1fcef4484208b);
+  out1[0] = UINT64_C(0x98c15e71a775bacd);
+  out1[1] = UINT64_C(0xa2fcebacc4dc18ae);
+  out1[2] = UINT64_C(0x69408a5a18d821d);
+  out1[3] = UINT64_C(0x4ff148f5f67a4a4f);
+  out1[4] = UINT64_C(0xe6e5dc21e4f7b05);
+  out1[5] = UINT64_C(0x25fd40dd45010876);
+  out1[6] = UINT64_C(0x1d3025eac960a);
 }
 
 /*
@@ -13582,11 +13582,11 @@ static void fiat_p434_jumpdivstep_precomp(uint64_t out1[7]) {
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 static void fiat_p434_jumpdivstep_precomp_hd(uint64_t out1[7]) {
-  out1[0] = UINT64_C(0x50298d8ce9b88b25);
-  out1[1] = UINT64_C(0x174efd51f90f97a6);
-  out1[2] = UINT64_C(0x296899465b71ff45);
-  out1[3] = UINT64_C(0x9d4a9d242bc4f74a);
-  out1[4] = UINT64_C(0xae104b712d346b45);
-  out1[5] = UINT64_C(0x6e7813e26578c0c2);
-  out1[6] = UINT64_C(0x11fcb7bb6d06a);
+  out1[0] = UINT64_C(0x8c70588b0bfbc3aa);
+  out1[1] = UINT64_C(0x18227bd18c70500f);
+  out1[2] = UINT64_C(0x28d51c57ed847304);
+  out1[3] = UINT64_C(0x1e76a9314efc3d20);
+  out1[4] = UINT64_C(0xdd87bc8518f6e881);
+  out1[5] = UINT64_C(0x3b288012f29e4a21);
+  out1[6] = UINT64_C(0x1f734f5849537);
 }

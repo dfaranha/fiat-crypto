@@ -2173,10 +2173,10 @@ static void fiat_p256_divstep(uint64_t* out1, uint64_t out2[5], uint64_t out3[5]
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 static void fiat_p256_divstep_precomp(uint64_t out1[4]) {
-  out1[0] = UINT64_C(0xd7ffffff98000001);
-  out1[1] = UINT64_C(0xa00000026ffffffe);
-  out1[2] = UINT64_C(0xa800000007fffffe);
-  out1[3] = UINT64_C(0xc7fffffe68000001);
+  out1[0] = UINT32_C(0x8000000);
+  out1[1] = 0x0;
+  out1[2] = 0x0;
+  out1[3] = 0x0;
 }
 
 /*
@@ -7072,10 +7072,10 @@ static void fiat_p256_update_vr(uint64_t out1[4], uint64_t out2[4], const uint64
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 static void fiat_p256_jumpdivstep_precomp(uint64_t out1[4]) {
-  out1[0] = UINT64_C(0xcaffdce0d6ffcede);
-  out1[1] = UINT64_C(0xfe003c20a7fff604);
-  out1[2] = UINT64_C(0xc3001a6a7a0036d4);
-  out1[3] = UINT64_C(0x66ffdbad0d002cef);
+  out1[0] = UINT64_C(0x7cfec80be6fb0ff8);
+  out1[1] = UINT64_C(0x9807da227901c473);
+  out1[2] = UINT64_C(0xfdff209ccf038e36);
+  out1[3] = UINT64_C(0x46f8d02bd9019143);
 }
 
 /*
@@ -7089,8 +7089,8 @@ static void fiat_p256_jumpdivstep_precomp(uint64_t out1[4]) {
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 static void fiat_p256_jumpdivstep_precomp_hd(uint64_t out1[4]) {
-  out1[0] = UINT64_C(0x20a00032a440002b);
-  out1[1] = UINT64_C(0xc31fffda55200020);
-  out1[2] = UINT64_C(0x212fffcaf25fffbe);
-  out1[3] = UINT64_C(0xa1a00001f9dfffc0);
+  out1[0] = UINT64_C(0xcd0004759d600759);
+  out1[1] = UINT64_C(0x490ff661d7400089);
+  out1[2] = UINT64_C(0x756ffd44406ff878);
+  out1[3] = UINT64_C(0x204006a566affa4c);
 }

@@ -10351,18 +10351,18 @@ static void fiat_p384_divstep(uint32_t* out1, uint32_t out2[13], uint32_t out3[1
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
 static void fiat_p384_divstep_precomp(uint32_t out1[12]) {
-  out1[0] = UINT32_C(0xfef413ff);
-  out1[1] = UINT32_C(0x22a0400);
-  out1[2] = UINT32_C(0x335dc00);
-  out1[3] = UINT32_C(0x1c647ff);
-  out1[4] = UINT32_C(0x1e03ff);
-  out1[5] = UINT32_C(0x4cc400);
-  out1[6] = UINT32_C(0x6bdc00);
-  out1[7] = UINT32_C(0x573c00);
-  out1[8] = UINT32_C(0xfff17800);
-  out1[9] = UINT32_C(0xff3edbff);
-  out1[10] = UINT32_C(0xfe7f43ff);
-  out1[11] = UINT32_C(0xfe32d7ff);
+  out1[0] = 0x0;
+  out1[1] = UINT16_C(0x400);
+  out1[2] = 0x0;
+  out1[3] = 0x0;
+  out1[4] = 0x0;
+  out1[5] = 0x0;
+  out1[6] = 0x0;
+  out1[7] = 0x0;
+  out1[8] = 0x0;
+  out1[9] = 0x0;
+  out1[10] = 0x0;
+  out1[11] = 0x0;
 }
 
 /*
@@ -26074,18 +26074,18 @@ static void fiat_p384_update_vr(uint32_t out1[12], uint32_t out2[12], const uint
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
 static void fiat_p384_jumpdivstep_precomp(uint32_t out1[12]) {
-  out1[0] = UINT32_C(0x52343a87);
-  out1[1] = UINT32_C(0x470f2584);
-  out1[2] = UINT32_C(0x2430be5a);
-  out1[3] = UINT32_C(0xe1203b59);
-  out1[4] = UINT32_C(0xd77a33c2);
-  out1[5] = UINT32_C(0x4e02d42c);
-  out1[6] = UINT32_C(0xf2edb9a4);
-  out1[7] = UINT32_C(0xd492a71b);
-  out1[8] = UINT32_C(0x98736136);
-  out1[9] = UINT32_C(0xbab54326);
-  out1[10] = UINT32_C(0xaa2696ae);
-  out1[11] = UINT32_C(0xeec0394f);
+  out1[0] = UINT32_C(0x518d2c6e);
+  out1[1] = UINT32_C(0xbde5515e);
+  out1[2] = UINT32_C(0x6a4b706f);
+  out1[3] = UINT32_C(0x52d4750c);
+  out1[4] = UINT32_C(0x501bd768);
+  out1[5] = UINT32_C(0xfe9a361a);
+  out1[6] = UINT32_C(0x471adf75);
+  out1[7] = UINT32_C(0x3c43484e);
+  out1[8] = UINT32_C(0xaa0abe49);
+  out1[9] = UINT32_C(0x8b42c449);
+  out1[10] = UINT32_C(0xea1c2e6);
+  out1[11] = UINT32_C(0x6d0b4e9c);
 }
 
 /*
@@ -26099,16 +26099,16 @@ static void fiat_p384_jumpdivstep_precomp(uint32_t out1[12]) {
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
 static void fiat_p384_jumpdivstep_precomp_hd(uint32_t out1[12]) {
-  out1[0] = UINT32_C(0x6fc02dca);
-  out1[1] = UINT32_C(0x7fc365a9);
-  out1[2] = UINT32_C(0x1001f2a6);
-  out1[3] = UINT32_C(0xc524ebe8);
-  out1[4] = UINT32_C(0x60158d72);
-  out1[5] = UINT32_C(0x25cd2435);
-  out1[6] = UINT32_C(0x911cf62c);
-  out1[7] = UINT32_C(0x46623793);
-  out1[8] = UINT32_C(0xccb711ff);
-  out1[9] = UINT32_C(0x4e028cb0);
-  out1[10] = UINT32_C(0xe25df1c6);
-  out1[11] = UINT32_C(0x87a0ac96);
+  out1[0] = UINT32_C(0x8eea3ca7);
+  out1[1] = UINT32_C(0xc270af7d);
+  out1[2] = UINT32_C(0x9cb857f7);
+  out1[3] = UINT32_C(0x2ed1244d);
+  out1[4] = UINT32_C(0x1897f600);
+  out1[5] = UINT32_C(0x68fd432f);
+  out1[6] = UINT32_C(0xbe475f73);
+  out1[7] = UINT32_C(0x8451909a);
+  out1[8] = UINT32_C(0x60402997);
+  out1[9] = UINT32_C(0x4df0105e);
+  out1[10] = UINT32_C(0xc7db6096);
+  out1[11] = UINT32_C(0xbad964fc);
 }
