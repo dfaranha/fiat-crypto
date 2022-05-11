@@ -242,7 +242,7 @@ JAVA_$(call JAVA_RENAME,$(1))_BITWIDTH:=$(4)
 JAVA_$(call JAVA_RENAME,$(1))_ARGS:=$(4) $(5)
 JAVA_$(call JAVA_RENAME,$(1))_FUNCTIONS:=$(6)
 
-BEDROCK2_$(1)_FUNCTIONS:=$(filter-out %msat %divstep %divstep_precomp %jumpdivstep_precomp %outer_loop_body %outer_loop_body_hd, $(6))
+BEDROCK2_$(1)_FUNCTIONS:=$(filter-out %msat %divstep %divstep_precomp %jumpdivstep_precomp %jumpdivstep_precomp_hd %inner_loop %inner_loop_hd %update_fg %update_vr, $(6))
 
 endef
 
