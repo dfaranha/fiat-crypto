@@ -31,7 +31,9 @@ void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
   WORD out2[SAT_LIMBS], out3[SAT_LIMBS], out4[LIMBS], out5[LIMBS];
 
   MSAT(f);
-  MONE(r);
+  for (int j = 0; j < LIMBS; j++) r[j] = 0;
+  r[0] = 1;
+
   for (int j = 0; j < LIMBS; j++) v[j] = 0;
 
   for (int i = 0; i < ITERATIONS - (ITERATIONS % 2); i+=2) {
