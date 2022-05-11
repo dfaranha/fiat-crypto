@@ -9,13 +9,10 @@ Require Import Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 
 Local Open Scope Z_scope.
+Local Coercion Z.of_nat : nat >-> Z.
 
 Lemma Nat_iter_S {A} n (f: A -> A) x : Nat.iter (S n) f x = f (Nat.iter n f x).
 Proof. reflexivity. Qed.
-
-Local Open Scope Z_scope.
-
-Local Coercion Z.of_nat : nat >-> Z.
 
 Definition divstep '(d, f, g) :=
   if Z.odd g
@@ -183,39 +180,6 @@ Proof.
     destruct (0 <? d1); destruct (Z.odd g1) eqn:E; assumption.
 Qed.
 
-(* Lemma odd_mod2m m a (Hm : 0 < m) : Z.odd (a mod 2 ^ m) = Z.odd a. *)
-(* Proof. *)
-(*   rewrite Zdiv.Zmod_eq_full, Z.odd_sub, Z.odd_mul, Z.odd_pow by (lia || apply Z.pow_nonzero; lia). *)
-(*   now rewrite andb_false_r, xorb_false_r. *)
-(* Qed. *)
-(* Search Z.modulo. *)
-(* Lemma mod_div : forall a b c : Z, 0 <= c -> (a / b) mod c = a mod (c * b) / b. *)
-(* Proof. *)
-(*   intros. *)
-(*   destruct (Z.eq_dec c 0) as [c_eq|?]; *)
-(*     destruct (Z.eq_dec b 0) as [b_eq|?];subst; *)
-(*     rewrite ?Z.mul_0_l, ?Z.mul_0_r, ?Zmod_0_r, ?Zdiv_0_r; try reflexivity. *)
-(*   rewrite !Z.mod_eq by lia. *)
-(*   apply Z.div_unique with (r:=a mod b). *)
-(*   pose proof Z.mod_pos_bound a b. pose proof Z.mod_neg_bound a b. lia. *)
-(*   rewrite !Z.mod_eq, Z.div_div, (Z.mul_comm c) by lia. ring. *)
-(* Qed. *)
-
-(* Lemma mod_pow_same_base_smaller a b n m : *)
-(*   0 <= m <= n -> 0 < b -> *)
-(*   (a mod (b^n)) mod (b^m) = a mod b^m. *)
-(* Proof. *)
-(*   intros. replace n with (m+(n-m)) by lia. *)
-(*   rewrite Z.pow_add_r, Z.rem_mul_r by auto with zarith. *)
-(*   rewrite Zplus_mod_idemp_l. *)
-(*   rewrite <- Zplus_mod_idemp_r. *)
-(*   rewrite <- Zmult_mod_idemp_l. *)
-(*   rewrite Z_mod_same_full. *)
-(*   rewrite Z.mul_0_l. *)
-(*   rewrite Z.mod_0_l. *)
-(*   rewrite Z.add_0_r.  reflexivity. apply Z.pow_nonzero. lia. lia. *)
-(* Qed. *)
-
 Lemma divstep_uvqr_important_bits d f f0 g g0 u v q r n k
       (Hk : (0 <= n < k)%nat)
       (fodd : Z.odd f = true)
@@ -280,19 +244,6 @@ Proof.
         apply H2.
       * rewrite <- Z.mod_pow_same_base_smaller with (n:=(Z.of_nat k - Z.of_nat n)), H3, Z.mod_pow_same_base_smaller; lia.
 Qed.
-
-(* Lemma mul_div_eq' : (forall a m, m > 0 -> (a / m) * m = (a - a mod m))%Z. *)
-(* Proof. *)
-(*   intros a m H. *)
-(*   rewrite (Z_div_mod_eq a m) at 2 by auto. *)
-(*   ring. *)
-(* Qed. *)
-(* Lemma mul_div_eq : forall a m, m > 0 -> m * (a / m) = (a - a mod m). *)
-(* Proof. *)
-(*   intros a m H. *)
-(*   rewrite (Z_div_mod_eq a m) at 2 by auto. *)
-(*   ring. *)
-(* Qed. *)
 
 Lemma jump_divstep_lemma m d f g v r n
       (fodd : Z.odd f = true)
@@ -408,62 +359,16 @@ Proof.
   specialize (IHn ltac:(lia)).
   destruct Nat.iter as [[[[dn fn]gn]vn]rn].
   destruct IHn as [fn_odd [vn_bounds rn_bounds]]; cbn -[Z.sub Z.of_nat Z.to_nat Z.add Z.mul].
-  destruct (Z.odd gn) eqn:E; destruct (0 <? dn).
-  split. assumption.
-  split. lia.
-  split. lia.
-  split. split. apply Z.div_lt_lower_bound. lia. lia.
-  apply Z.div_lt_upper_bound. lia. lia.
-  split; apply Z.mod_pos_bound; lia.
-  split. assumption.
-  split. lia.
-  split. lia.
-  split. split.
-  apply Z.div_lt_lower_bound. lia. lia.
-  apply Z.div_lt_upper_bound. lia. lia.
-  split; apply Z.mod_pos_bound; lia.
-  split. assumption.
-  split. lia.
-  split. lia.
-  split. split.
-  apply Z.div_lt_lower_bound. lia. lia.
-  apply Z.div_lt_upper_bound. lia. lia.
-  split; apply Z.mod_pos_bound; lia.
-  split. assumption.
-  split. lia.
-  split. lia.
-  split. split.
-  apply Z.div_lt_lower_bound. lia. lia.
-  apply Z.div_lt_upper_bound. lia. lia.
-  split; apply Z.mod_pos_bound; lia.
+  destruct (Z.odd gn) eqn:E; destruct (0 <? dn);
+  repeat match goal with
+         | |- 0 <= _ mod _ < _ => apply Z.mod_pos_bound
+         | |- _ /\ _ => split
+         | |- _ < _ / _ => apply Z.div_lt_lower_bound
+         | |- _ / _ < _ => apply Z.div_lt_upper_bound
+         | _ => assumption
+         | _ => lia
+         end.
 Qed.
-
-
-
-(* Lemma iter_jump_divstep_vr_invariants (n : nat) mw k m d f g v r Kd K *)
-(*       (f_odd : Z.odd f = true) *)
-(*       (Hmw : n < mw) *)
-(*       (Hm : 1 < m) *)
-(*       (Hd : - Kd < d < Kd) *)
-(*       (Hf : - K < f < K) *)
-(*       (Hg : - K < g < K) *)
-(*       (Hv : 0 <= v < m) *)
-(*       (Hr : 0 <= r < m) : *)
-(*   let '(d1,f1,g1,v1,r1) := Nat.iter k (jump_divstep_vr n mw m) (d, f, g, v, r) in *)
-(*   Z.odd f1 = true *)
-(*   /\ - (Kd + k * n) < d1 < Kd + k * n *)
-(*   /\ - K < f1 < K *)
-(*   /\ - K < g1 < K *)
-(*   /\ 0 <= v1 < m *)
-(*   /\ 0 <= r1 < m. *)
-(* Proof. *)
-(*   induction k as [|k IHk]; cbn -[Z.add Z.to_nat Z.opp Z.sub Z.of_nat Nat.iter]; [rewrite Z.add_0_r; easy|]. *)
-(*   rewrite Nat_iter_S. *)
-(*   destruct Nat.iter as [[[[d1 f1] g1] v1] r1]. *)
-(*   destruct IHk as [f1_odd [d1_bounds [f1_bounds[g1_bounds[v1_bounds r1_bounds]]]]]. *)
-(*   replace (Kd + S k * n) with ((Kd + k * n) + n) by lia. *)
-(*   eapply jump_divstep_vr_invariants; try assumption. *)
-(* Qed. *)
 
 Lemma nat_iter_jump_divstep_vr_mul mw m d f g v r n k q :
   Nat.iter n (jump_divstep_vr k mw m) (d, f, g, v * q mod m, r * q mod m) =

@@ -23,6 +23,12 @@ Require Import Crypto.Util.ZUtil.TwosComplementPos.
 Local Open Scope Z_scope.
 
 #[global] Hint Rewrite
+ length_tc_add
+ arithmetic_shiftr_length
+ word_tc_mul_length
+  : length_distr.
+
+#[global] Hint Rewrite
  tc_eval_arithmetic_shiftr1
  tc_eval_tc_add
  tc_eval_select
@@ -35,6 +41,7 @@ Local Open Scope Z_scope.
  Z.twos_complement_add_full
  Z.twos_complement_opp'_spec
  Z.twos_complement_one
+ Z.twos_complement_zero
  Z.twos_complement_pos'_spec : Ztc.
 
 #[global] Hint Resolve
@@ -58,6 +65,7 @@ Local Open Scope Z_scope.
  UnsaturatedSolinas.length_mulmod
  UnsaturatedSolinas.length_carry_mulmod
  UnsaturatedSolinas.length_encodemod
+ UnsaturatedSolinas.word_to_solina_length
   : len.
 
 #[global] Hint Extern 3 (_ < _) => lia : len.

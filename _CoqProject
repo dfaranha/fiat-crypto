@@ -57,6 +57,7 @@ src/Arithmetic/BYInv/Divstep.v
 src/Arithmetic/BYInv/EvalLemmas.v
 src/Arithmetic/BYInv/Firstn.v
 src/Arithmetic/BYInv/Hints.v
+src/Arithmetic/BYInv/JumpDivstep.v
 src/Arithmetic/BYInv/Mod2.v
 src/Arithmetic/BYInv/One.v
 src/Arithmetic/BYInv/Ones.v

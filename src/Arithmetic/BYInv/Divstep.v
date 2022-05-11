@@ -526,22 +526,22 @@ Module Export UnsaturatedSolinas.
             (tc_limbs0 : (0 < tc_limbs)%nat)
             (n0 : (0 < n)%nat).
 
-    Local Notation eval := (Positional.eval (weight limbwidth_num limbwidth_den) n).
+    #[local] Notation eval := (Positional.eval (weight limbwidth_num limbwidth_den) n).
 
     Context (balance : list Z)
             (length_balance : length balance = n)
             (eval_balance : eval balance mod (s - Associational.eval c) = 0).
 
-    Local Notation divstep_aux := (divstep_aux limbwidth_num limbwidth_den machine_wordsize s c n tc_limbs idxs balance).
-    Local Notation divstep := (divstep limbwidth_num limbwidth_den machine_wordsize s c n tc_limbs idxs balance).
-    Local Notation tc_eval := (tc_eval machine_wordsize tc_limbs).
-    Local Notation tc := (Z.twos_complement machine_wordsize).
-    Local Notation m := (s - Associational.eval c).
-    Local Notation in_bounded := (in_bounded machine_wordsize).
+    #[local] Notation divstep_aux := (divstep_aux limbwidth_num limbwidth_den machine_wordsize s c n tc_limbs idxs balance).
+    #[local] Notation divstep := (divstep limbwidth_num limbwidth_den machine_wordsize s c n tc_limbs idxs balance).
+    #[local] Notation tc_eval := (tc_eval machine_wordsize tc_limbs).
+    #[local] Notation tc := (Z.twos_complement machine_wordsize).
+    #[local] Notation m := (s - Associational.eval c).
+    #[local] Notation in_bounded := (in_bounded machine_wordsize).
 
-    Local Notation addmod := (addmod limbwidth_num limbwidth_den n).
-    Local Notation oppmod := (oppmod limbwidth_num limbwidth_den n balance).
-    Local Notation carrymod := (carrymod limbwidth_num limbwidth_den s c n idxs).
+    #[local] Notation addmod := (addmod limbwidth_num limbwidth_den n).
+    #[local] Notation oppmod := (oppmod limbwidth_num limbwidth_den n balance).
+    #[local] Notation carrymod := (carrymod limbwidth_num limbwidth_den s c n idxs).
 
     #[local] Hint Resolve (select_in_bounded machine_wordsize tc_limbs) : in_bounded.
 
