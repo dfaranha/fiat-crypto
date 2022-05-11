@@ -584,7 +584,7 @@ Module Export UnsaturatedSolinas.
           (f_bounds : - 2 ^ (machine_wordsize * tc_limbs - 2) < tc_eval f < 2 ^ (machine_wordsize * tc_limbs - 2))
           (g_bounds : - 2 ^ (machine_wordsize * tc_limbs - 2) < tc_eval g < 2 ^ (machine_wordsize * tc_limbs - 2))
           (f_in_bounded : in_bounded f)
-          (g_in_bounded : forall z, In z g -> 0 <= z < 2 ^ machine_wordsize) :
+          (g_in_bounded : in_bounded g) :
       let '(_,f1,g1,v1,r1) :=
         fold_left (fun data i => divstep_aux data) (seq 0 k) (d,f,g,v,r) in
       length f1 = tc_limbs
@@ -623,8 +623,8 @@ Module Export UnsaturatedSolinas.
           (d_bounds : - 2 ^ (machine_wordsize - 1) + 1 < tc d < 2 ^ (machine_wordsize - 1) - 1)
           (f_bounds : - 2 ^ (machine_wordsize * tc_limbs - 2) < tc_eval f < 2 ^ (machine_wordsize * tc_limbs - 2))
           (g_bounds : - 2 ^ (machine_wordsize * tc_limbs - 2) < tc_eval g < 2 ^ (machine_wordsize * tc_limbs - 2))
-          (f_in_bounds : forall z, In z f -> 0 <= z < 2^machine_wordsize)
-          (g_in_bounds : forall z, In z g -> 0 <= z < 2^machine_wordsize) :
+          (f_in_bounded : in_bounded f)
+          (g_in_bounded : in_bounded g) :
       let '(d1,f1,g1,v1,r1) := (divstep_aux (d, f, g, v, r)) in
       (tc d1, tc_eval f1, tc_eval g1, eval v1 mod m, eval r1 mod m) =
         divstep_vr_mod m (tc d, tc_eval f, tc_eval g, eval v mod m, eval r mod m).
@@ -656,8 +656,8 @@ Module Export UnsaturatedSolinas.
           (d_bounds : - 2 ^ (machine_wordsize - 1) + Z.of_nat k < tc d < 2 ^ (machine_wordsize - 1) - Z.of_nat k)
           (f_bounds : - 2 ^ (machine_wordsize * tc_limbs - 2) < tc_eval f < 2 ^ (machine_wordsize * tc_limbs - 2))
           (g_bounds : - 2 ^ (machine_wordsize * tc_limbs - 2) < tc_eval g < 2 ^ (machine_wordsize * tc_limbs - 2))
-          (f_in_bounds : forall z, In z f -> 0 <= z < 2^machine_wordsize)
-          (g_in_bounds : forall z, In z g -> 0 <= z < 2^machine_wordsize) :
+          (f_in_bounded : in_bounded f)
+          (g_in_bounded : in_bounded g) :
       let '(d1,f1,g1,v1,r1) := fold_left (fun data i => divstep_aux data) (seq 0 k) (d,f,g,v,r) in
       (tc d1, tc_eval f1, tc_eval g1, eval v1 mod m, eval r1 mod m) =
         Nat.iter k (divstep_vr_mod m) (tc d, tc_eval f, tc_eval g, eval v mod m, eval r mod m).
@@ -666,7 +666,7 @@ Module Export UnsaturatedSolinas.
       - reflexivity.
       - rewrite seq_snoc, fold_left_app. simpl.
         pose proof divstep_iter_d_bounds d f g v r k (2 ^ (machine_wordsize - 1) - Z.of_nat (S k)) ltac:(lia) ltac:(lia).
-        pose proof divstep_iter_bounds d f g v r k f_odd f_length g_length v_length r_length ltac:(lia) f_bounds g_bounds f_in_bounds g_in_bounds.
+        pose proof divstep_iter_bounds d f g v r k f_odd f_length g_length v_length r_length ltac:(lia) f_bounds g_bounds f_in_bounded g_in_bounded.
         destruct (fold_left (fun (data : Z * list Z * list Z * list Z * list Z) (_ : nat) => divstep_aux data) (seq 0 k) (d, f, g, v, r)) as [[[[d1 f1] g1] v1] r1] eqn:E.
         destruct H0 as [? [? [? [? [? [? [? [?]]]]]]]].
         rewrite <- IHk by lia.

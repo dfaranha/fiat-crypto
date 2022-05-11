@@ -54,7 +54,11 @@ Local Open Scope Z_scope.
  WordByWordMontgomery.length_oppmod
  UnsaturatedSolinas.length_addmod
  UnsaturatedSolinas.length_carrymod
- UnsaturatedSolinas.length_oppmod : len.
+ UnsaturatedSolinas.length_oppmod
+ UnsaturatedSolinas.length_mulmod
+ UnsaturatedSolinas.length_carry_mulmod
+ UnsaturatedSolinas.length_encodemod
+  : len.
 
 #[global] Hint Extern 3 (_ < _) => lia : len.
 #[global] Hint Extern 3 (_ <= _) => lia : len.

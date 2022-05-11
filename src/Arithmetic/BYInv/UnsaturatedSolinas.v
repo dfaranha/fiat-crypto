@@ -24,4 +24,18 @@ Module UnsaturatedSolinas.
          length (carrymod limbwidth_num limbwidth_den s c n idxs f) = n.
   Proof. intros; unfold carrymod; apply length_chained_carries; assumption. Qed.
 
+  Lemma length_mulmod weight s c n f g :
+    length (mulmod weight s c n f g) = n.
+  Proof. intros; unfold mulmod; apply Positional.length_from_associational. Qed.
+
+  Lemma length_carry_mulmod limbwidth_num limbwidth_den s c n idxs :
+    forall f, length f = n ->
+         forall g, length g = n ->
+    length (carry_mulmod limbwidth_num limbwidth_den s c n idxs f g) = n.
+  Proof. intros. unfold carry_mulmod. apply Positional.length_chained_carries. apply length_mulmod. Qed.
+
+  Lemma length_encodemod limbwidth_num limbwidth_den s c n a :
+    length (encodemod limbwidth_num limbwidth_den s c n a) = n.
+  Proof. unfold encodemod. apply Positional.length_encode. Qed.
+
 End UnsaturatedSolinas.
