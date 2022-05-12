@@ -86,21 +86,29 @@ Module WordByWordMontgomery.
     Notation oppmod := (oppmod machine_wordsize mont_limbs m).
     Notation from_montgomerymod := (from_montgomerymod machine_wordsize mont_limbs m m').
     Notation in_bounded := (in_bounded machine_wordsize).
-    Notation divstep_precompmod := (divstep_precompmod machine_wordsize mont_limbs m).
-    Notation partition_divstep_precomp := (partition_divstep_precomp machine_wordsize mont_limbs m).
+    Notation divstep_precomp := (divstep_precomp machine_wordsize mont_limbs m).
+    Notation partition := (Partition.partition (uweight machine_wordsize)).
     Notation by_inv := (by_inv machine_wordsize mont_limbs tc_limbs m m').
 
-    Lemma precomp_bound : 0 <= divstep_precompmod < m.
+    #[local] Hint Resolve
+     (length_mulmod machine_wordsize mont_limbs m r' m' ltac:(assumption) ltac:(assumption) ltac:(lia) ltac:(lia) ltac:(lia) ltac:(lia))
+      : len.
+    #[local] Hint Resolve
+     (mulmod_valid machine_wordsize mont_limbs m r' m' ltac:(assumption) ltac:(assumption) ltac:(lia) ltac:(lia) ltac:(lia) ltac:(lia))
+      : valid.
+
+    Lemma precomp_bound : 0 <= divstep_precomp < m.
     Proof.
-      unfold divstep_precompmod.
+      unfold divstep_precomp.
       rewrite Z.modexp_correct.
       apply Z.mod_pos_bound. lia.
     Qed.
 
+    #[local] Hint Resolve precomp_bound : valid.
+
     Lemma eval_precomp :
-      eval partition_divstep_precomp = divstep_precompmod.
+      eval (partition mont_limbs divstep_precomp) = divstep_precomp.
     Proof.
-      unfold partition_divstep_precomp.
       replace eval with (Positional.eval (uweight machine_wordsize) mont_limbs) by reflexivity.
       rewrite eval_partition.
       rewrite Z.mod_small. reflexivity.
@@ -108,13 +116,6 @@ Module WordByWordMontgomery.
       rewrite Z.pow_mul_r by lia.
       pose proof precomp_bound.
       lia. apply uwprops. lia.
-    Qed.
-
-    Lemma precomp_valid : valid partition_divstep_precomp.
-    Proof.
-      unfold partition_divstep_precomp.
-      apply partition_valid. lia. lia.
-      apply precomp_bound.
     Qed.
 
     Theorem by_inv_jump_spec g
@@ -172,20 +173,6 @@ Module WordByWordMontgomery.
 
       replace eval with (Positional.eval (uweight machine_wordsize) mont_limbs) by reflexivity.
       rewrite Positional.eval_select; auto with len.
-      2: { unfold partition_divstep_precomp.
-           apply length_mulmod with (r':=r').
-           assumption.
-           assumption. lia. lia. lia. lia.
-           apply partition_valid. lia. lia.
-           apply precomp_bound.
-           assumption. }
-      2: { apply length_oppmod. lia.
-           apply length_mulmod with (r':=r').
-           assumption.
-           assumption. lia. lia. lia. lia.
-           apply partition_valid. lia. lia.
-           apply precomp_bound.
-           assumption. }
 
       destruct (tc_eval fn <? 0).
       - cbn -[Z.mul Z.add mulmod oppmod].
@@ -194,7 +181,7 @@ Module WordByWordMontgomery.
         pull_Zmod; push_Zmod.
         rewrite eval_mulmod' with (r':=r').
         rewrite eval_precomp.
-        unfold divstep_precompmod.
+        unfold divstep_precomp.
         push_Zmod.
         rewrite !Z.modexp_correct.
         rewrite H7.
@@ -216,16 +203,13 @@ Module WordByWordMontgomery.
         rewrite <- Z.pow_mul_r.  lia.
         lia. lia.
         rewrite <- Z.pow_add_r.
-        f_equal. all: try lia.
-        apply precomp_valid. assumption.
-        apply mulmod_valid with (r':=r'). all: try lia.
-        apply precomp_valid. assumption.
+        f_equal. all: auto with valid; lia.
       - cbn -[Z.mul Z.add mulmod oppmod].
         replace (Positional.eval (uweight machine_wordsize) mont_limbs) with eval by reflexivity.
         pull_Zmod; push_Zmod.
         rewrite eval_mulmod' with (r':=r').
         rewrite eval_precomp.
-        unfold divstep_precompmod.
+        unfold divstep_precomp.
         push_Zmod.
         rewrite !Z.modexp_correct.
         rewrite H7.
@@ -247,8 +231,7 @@ Module WordByWordMontgomery.
         rewrite <- Z.pow_mul_r.  lia.
         lia. lia.
         rewrite <- Z.pow_add_r.
-        f_equal. all: try lia.
-        apply precomp_valid. assumption.
+        f_equal. all: auto with valid; lia.
     Qed.
 
   End __.
@@ -301,32 +284,23 @@ Module UnsaturatedSolinas.
     Local Notation carry_mulmod := (carry_mulmod limbwidth_num limbwidth_den s c n idxs).
     Local Notation encodemod := (encodemod limbwidth_num limbwidth_den s c n).
 
-
-    Local Notation divstep_precompmod := (divstep_precompmod s c).
-    Local Notation encodemod_divstep_precomp := (encodemod_divstep_precomp limbwidth_num limbwidth_den s c n).
-    Local Notation partition_divstep_precomp := (partition_divstep_precomp machine_wordsize n m).
+    Local Notation divstep_precomp := (divstep_precomp s c).
+    Local Notation partition := (Partition.partition (uweight machine_wordsize) tc_limbs).
     Local Notation by_inv := (by_inv limbwidth_num limbwidth_den machine_wordsize s c n tc_limbs idxs balance).
 
-    Lemma precomp_bound : 0 <= divstep_precompmod < m.
+    Lemma precomp_bound : 0 <= divstep_precomp < m.
     Proof.
-      unfold divstep_precompmod.
+      unfold divstep_precomp.
       rewrite Z.modexp_correct.
       apply Z.mod_pos_bound. lia.
     Qed.
 
     Lemma eval_precomp :
-      eval encodemod_divstep_precomp mod m = divstep_precompmod.
+      eval (encodemod divstep_precomp) mod m = divstep_precomp.
     Proof.
-      unfold encodemod_divstep_precomp.
       rewrite eval_encodemod, Z.mod_small.
       all: auto.  apply precomp_bound.
     Qed.
-
-    Lemma length_precomp :
-      length encodemod_divstep_precomp = n.
-    Proof. unfold encodemod_divstep_precomp. auto with len. Qed.
-
-    #[local] Hint Resolve length_precomp : len.
 
     Theorem by_inv_jump_spec g
             (g_length : length g = tc_limbs)
@@ -398,7 +372,7 @@ Module UnsaturatedSolinas.
         rewrite eval_carry_mulmod.
         push_Zmod.
         rewrite eval_precomp.
-        unfold divstep_precompmod.
+        unfold divstep_precomp.
         push_Zmod.
         rewrite !Z.modexp_correct.
         rewrite H7.
@@ -413,7 +387,7 @@ Module UnsaturatedSolinas.
         rewrite eval_carry_mulmod.
         push_Zmod.
         rewrite eval_precomp.
-        unfold divstep_precompmod.
+        unfold divstep_precomp.
         push_Zmod.
         rewrite !Z.modexp_correct.
         rewrite H7.

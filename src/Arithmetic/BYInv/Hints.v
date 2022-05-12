@@ -68,9 +68,11 @@ Local Open Scope Z_scope.
  UnsaturatedSolinas.word_to_solina_length
   : len.
 
+#[global] Hint Extern 3 (_ <> _) => lia : len.
 #[global] Hint Extern 3 (_ < _) => lia : len.
 #[global] Hint Extern 3 (_ <= _) => lia : len.
 #[global] Hint Extern 3 (_ <= _ < _) => lia : len.
+#[global] Hint Extern 4 (_ <> _)%nat => lia : len.
 #[global] Hint Extern 4 (_ < _)%nat => lia : len.
 #[global] Hint Extern 4 (_ <= _)%nat => lia : len.
 #[global] Hint Extern 4 (_ <= _)%nat => progress autorewrite with length_distr; auto with len : len.
@@ -87,9 +89,11 @@ Local Open Scope Z_scope.
  WordByWordMontgomery.partition_valid
   : valid.
 
+#[global] Hint Extern 3 (_ <> _) => lia : valid.
 #[global] Hint Extern 3 (_ < _) => lia : valid.
 #[global] Hint Extern 3 (_ <= _) => lia : valid.
 #[global] Hint Extern 3 (_ <= _ < _) => lia : valid.
+#[global] Hint Extern 4 (_ <> _)%nat => lia : valid.
 #[global] Hint Extern 4 (_ < _)%nat => lia : valid.
 #[global] Hint Extern 4 (_ <= _)%nat => lia : valid.
 #[global] Hint Extern 3 (length _ = _) => auto with len : valid.

@@ -431,7 +431,7 @@ Module Export WordByWordMontgomery.
         all: t.
     Qed.
 
-    Lemma divstep_full d f g v r
+    Lemma divstep_correct d f g v r
           (f_odd : Z.odd (tc_eval f) = true)
           (f_length : length f = tc_limbs)
           (g_length : length g = tc_limbs)
@@ -496,7 +496,7 @@ Module Export WordByWordMontgomery.
         destruct (fold_left (fun (data : Z * list Z * list Z * list Z * list Z) (_ : nat) => divstep_aux data) (seq 0 n) (d, f, g, v, r)) as [[[[d1 f1] g1] v1] r1] eqn:E.
         destruct H0 as [? [? [? [? [? [? [? [? [? [?]]]]]]]]]].
         rewrite <- IHn by lia.
-        apply divstep_full; try assumption; lia.
+        apply divstep_correct; try assumption; lia.
     Qed.
   End __.
 End WordByWordMontgomery.
@@ -614,7 +614,7 @@ Module Export UnsaturatedSolinas.
         all: t.
     Qed.
 
-    Lemma divstep_full d f g v r
+    Lemma divstep_correct d f g v r
           (f_odd : Z.odd (tc_eval f) = true)
           (f_length : length f = tc_limbs)
           (g_length : length g = tc_limbs)
@@ -670,7 +670,7 @@ Module Export UnsaturatedSolinas.
         destruct (fold_left (fun (data : Z * list Z * list Z * list Z * list Z) (_ : nat) => divstep_aux data) (seq 0 k) (d, f, g, v, r)) as [[[[d1 f1] g1] v1] r1] eqn:E.
         destruct H0 as [? [? [? [? [? [? [? [?]]]]]]]].
         rewrite <- IHk by lia.
-        apply divstep_full; try assumption; lia.
+        apply divstep_correct; try assumption; lia.
     Qed.
   End __.
 End UnsaturatedSolinas.

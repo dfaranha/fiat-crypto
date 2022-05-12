@@ -21,9 +21,15 @@ fn fieldElement(comptime Field: type) type {
             fiat.msat(&f);
 
             var g = mem.zeroes(XLimbs);
-            fiat.fromMontgomery(g[0..a.limbs.len], a.limbs); // Assume input in Montgomery domain
 
-            var r = one.limbs;
+            var j: usize = 0;
+            while (j < a.limbs.len) : (j += 1) {
+                g[j] = a.limbs[j];
+            }
+            g[g.len - 1] = 0;
+
+            var r = mem.zeroes(Field.Limbs);
+            r[0] = 1;
             var v = mem.zeroes(Field.Limbs);
 
             var precomp: Field.Limbs = undefined;

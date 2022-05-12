@@ -66,8 +66,8 @@ Module WordByWordMontgomery.
     Notation oppmod := (oppmod machine_wordsize mont_limbs m).
     Notation from_montgomerymod := (from_montgomerymod machine_wordsize mont_limbs m m').
     Notation in_bounded := (in_bounded machine_wordsize).
-    Notation jumpdivstep_precompmod := (jumpdivstep_precompmod machine_wordsize mont_limbs m).
-    Notation partition_jumpdivstep_precomp := (partition_jumpdivstep_precomp machine_wordsize mont_limbs m).
+    Notation jumpdivstep_precomp := (jumpdivstep_precomp machine_wordsize mont_limbs m).
+    Notation partition := (Partition.partition (uweight machine_wordsize)).
     Notation by_inv_jump := (by_inv_jump machine_wordsize mont_limbs tc_limbs word_tc_mul_limbs m m').
 
     #[local] Hint Resolve
@@ -93,16 +93,16 @@ Module WordByWordMontgomery.
                      | |- _ => lia
                      end.
 
-    Lemma precomp_bound : 0 <= jumpdivstep_precompmod < m.
+    Lemma precomp_bound : 0 <= jumpdivstep_precomp < m.
     Proof.
-      unfold jumpdivstep_precompmod.
       apply Z.mod_pos_bound. lia.
     Qed.
 
+    #[local] Hint Resolve precomp_bound : valid.
+
     Lemma eval_precomp :
-      eval partition_jumpdivstep_precomp = jumpdivstep_precompmod.
+      eval (partition mont_limbs jumpdivstep_precomp) = jumpdivstep_precomp.
     Proof.
-      unfold partition_jumpdivstep_precomp.
       replace eval with (Positional.eval (uweight machine_wordsize) mont_limbs) by reflexivity.
       rewrite eval_partition.
       rewrite Z.mod_small. reflexivity.
@@ -111,19 +111,6 @@ Module WordByWordMontgomery.
       pose proof precomp_bound.
       lia. apply uwprops. lia.
     Qed.
-
-    Lemma precomp_valid : valid partition_jumpdivstep_precomp.
-    Proof.
-      unfold partition_jumpdivstep_precomp.
-      apply partition_valid. lia. lia.
-      apply precomp_bound.
-    Qed.
-
-    Lemma length_precomp : length partition_jumpdivstep_precomp = mont_limbs.
-    Proof. unfold partition_jumpdivstep_precomp. auto with len. Qed.
-
-    #[local] Hint Resolve length_precomp : len.
-    #[local] Hint Resolve precomp_valid : valid.
 
     Theorem by_inv_jump_spec g
             (g_length : length g = tc_limbs)
@@ -141,7 +128,6 @@ Module WordByWordMontgomery.
       unfold by_inv_jump.
       unfold by_inv_jump_ref.
       unfold by_inv_jump_full.
-      unfold jumpdivstep_precompmod.
       set (msat := Partition.partition (uweight machine_wordsize) tc_limbs m).
       assert (eval_msat : tc_eval msat = m).
       { unfold msat. unfold tc_eval. rewrite eval_partition. 2: apply uwprops; lia.
@@ -191,7 +177,7 @@ Module WordByWordMontgomery.
         rewrite eval_oppmod' by t.
         pull_Zmod; push_Zmod.
         rewrite eval_mulmod' with (r':=r'), eval_precomp by t.
-        unfold jumpdivstep_precompmod.
+        unfold jumpdivstep_precomp.
         push_Zmod.
         rewrite !Z.modexp_correct.
         rewrite H8.
@@ -235,7 +221,7 @@ Module WordByWordMontgomery.
       - cbn -[Z.mul Z.add mulmod oppmod].
         replace (Positional.eval (uweight machine_wordsize) mont_limbs ) with eval by reflexivity.
         rewrite eval_mulmod' with (r':=r'), eval_precomp by t.
-        unfold jumpdivstep_precompmod.
+        unfold jumpdivstep_precomp.
 
         push_Zmod.
         rewrite !Z.modexp_correct.
@@ -313,12 +299,12 @@ Module UnsaturatedSolinas.
     #[local] Notation tc := (Z.twos_complement machine_wordsize).
     #[local] Notation m := (s - Associational.eval c).
     #[local] Notation in_bounded := (in_bounded machine_wordsize).
-    #[local] Notation jumpdivstep_precompmod := (jumpdivstep_precompmod machine_wordsize s c).
-    #[local] Notation encodemod_jumpdivstep_precomp := (encodemod_jumpdivstep_precomp limbwidth_num limbwidth_den machine_wordsize s c n).
+    #[local] Notation jumpdivstep_precomp := (jumpdivstep_precomp machine_wordsize s c).
 
     #[local] Notation addmod := (addmod limbwidth_num limbwidth_den n).
     #[local] Notation oppmod := (oppmod limbwidth_num limbwidth_den n balance).
     #[local] Notation carrymod := (carrymod limbwidth_num limbwidth_den s c n idxs).
+    #[local] Notation encodemod := (encodemod limbwidth_num limbwidth_den s c n).
 
     Ltac t := repeat match goal with
                      | |- length _ = _ => auto with len
@@ -329,26 +315,19 @@ Module UnsaturatedSolinas.
                      | |- context[tc_eval] => autorewrite with tc
                      end.
 
-    Lemma precomp_bound : 0 <= jumpdivstep_precompmod < m.
+    Lemma precomp_bound : 0 <= jumpdivstep_precomp < m.
     Proof.
-      unfold jumpdivstep_precompmod.
       apply Z.mod_pos_bound. lia.
     Qed.
 
     Lemma eval_precomp :
-      eval encodemod_jumpdivstep_precomp mod m = jumpdivstep_precompmod.
+      eval (encodemod jumpdivstep_precomp) mod m = jumpdivstep_precomp.
     Proof.
-      unfold encodemod_jumpdivstep_precomp.
       rewrite eval_encodemod.
       rewrite Z.mod_small. reflexivity.
       apply precomp_bound.
       all: t.
     Qed.
-
-    Lemma length_precomp : length encodemod_jumpdivstep_precomp = n.
-    Proof. unfold encodemod_jumpdivstep_precomp. auto with len. Qed.
-
-    #[local] Hint Resolve length_precomp : len.
 
     Theorem by_inv_jump_spec g
             (g_length : length g = tc_limbs)
@@ -400,7 +379,7 @@ Module UnsaturatedSolinas.
         rewrite eval_carry_mulmod by t.
         push_Zmod.
         rewrite eval_precomp.
-        unfold jumpdivstep_precompmod.
+        unfold jumpdivstep_precomp.
         rewrite !Z.modexp_correct.
         rewrite H8.
         pull_Zmod.
@@ -416,7 +395,7 @@ Module UnsaturatedSolinas.
         rewrite eval_carry_mulmod by t.
         push_Zmod.
         rewrite eval_precomp.
-        unfold jumpdivstep_precompmod.
+        unfold jumpdivstep_precomp.
         rewrite !Z.modexp_correct.
         rewrite H8.
         pull_Zmod.
