@@ -197,9 +197,9 @@ Section __.
   Definition larger_bounds : list (ZRange.type.option.interp base.type.Z)
     := larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
 
-  Local Notation divstep_precompmod := (divstep_precompmod s c).
-  Local Notation jumpdivstep_precompmod := (jumpdivstep_precompmod machine_wordsize s c).
-  Local Notation jumpdivstep_precompmod_hd := (jumpdivstep_precompmod_hd machine_wordsize s c).
+  Local Notation divstep_precompmod := (divstep_precomp s c).
+  Local Notation jumpdivstep_precompmod := (jumpdivstep_precomp machine_wordsize s c).
+  Local Notation jumpdivstep_precompmod_hd := (jumpdivstep_precomp_hd machine_wordsize s c).
 
   Definition divstep_input :=
     (Some r[0~>2^machine_wordsize-1],

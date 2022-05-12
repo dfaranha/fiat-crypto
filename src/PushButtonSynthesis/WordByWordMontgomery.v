@@ -155,9 +155,9 @@ Section __.
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
   Local Notation larger_saturated_bounds := (Primitives.saturated_bounds sat_limbs machine_wordsize).
 
-  Local Notation divstep_precompmod := (divstep_precompmod machine_wordsize n m).
-  Local Notation jumpdivstep_precompmod := (jumpdivstep_precompmod machine_wordsize n m).
-  Local Notation jumpdivstep_precompmod_hd := (jumpdivstep_precompmod_hd machine_wordsize n m).
+  Local Notation divstep_precompmod := (divstep_precomp machine_wordsize n m).
+  Local Notation jumpdivstep_precompmod := (jumpdivstep_precomp machine_wordsize n m).
+  Local Notation jumpdivstep_precompmod_hd := (jumpdivstep_precomp_hd machine_wordsize n m).
 
   Definition divstep_input :=
     (Some r[0~>2^machine_wordsize-1],

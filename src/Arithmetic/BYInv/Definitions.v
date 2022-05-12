@@ -369,7 +369,7 @@ Module Export WordByWordMontgomery.
       let inv := select sign inv (oppmod inv) in
       inv.
 
-    Definition jumpdivstep_precompmod_hd :=
+    Definition jumpdivstep_precomp_hd :=
       let bits := (Z.log2 m) + 1 in
       let jump_its := ((iterations_hd bits) / (machine_wordsize - 2)) + 1 in
       let total_iterations := jump_its * (machine_wordsize - 2) in
