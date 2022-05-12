@@ -24,6 +24,7 @@ Require Import Crypto.Arithmetic.BYInv.One.
 Require Import Crypto.Arithmetic.BYInv.Hints.
 Require Import Crypto.Arithmetic.BYInv.WordByWordMontgomery.
 Require Import Crypto.Arithmetic.BYInv.UnsaturatedSolinas.
+Require Import Crypto.Arithmetic.BYInv.EvalLemmas.
 
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil.
@@ -71,7 +72,10 @@ Module WordByWordMontgomery.
       (mw2 : 2 < machine_wordsize)
       (tc_limbs0 : (0 < tc_limbs)%nat)
       (mont_limbs1 : (1 < mont_limbs)%nat)
-      (word_tc_mul_limbs_eq : (word_tc_mul_limbs = 1 + tc_limbs)%nat).
+      (word_tc_mul_limbs_eq : (word_tc_mul_limbs = 1 + tc_limbs)%nat)
+      (m_odd : Z.odd m = true)
+      (m_bounds2 : m < 2 ^ (machine_wordsize * tc_limbs - 2))
+      (iterations_bounds : 0 <= 2 ^ (machine_wordsize - 1) - iterations (Z.log2 m + 1) - 3).
 
     Notation jump_divstep := (jump_divstep machine_wordsize mont_limbs tc_limbs word_tc_mul_limbs m m').
     Notation eval := (@WordByWordMontgomery.eval machine_wordsize mont_limbs).
@@ -118,13 +122,11 @@ Module WordByWordMontgomery.
       lia. apply uwprops. lia.
     Qed.
 
-    Theorem by_inv_jump_spec g
+    Theorem by_inv_jump_correct g
             (g_length : length g = tc_limbs)
-            (g_bounds : - 2 ^ (machine_wordsize * Z.of_nat tc_limbs - 2) < tc_eval g < 2 ^ (machine_wordsize * Z.of_nat tc_limbs - 2))
             (g_in_bounded : in_bounded g)
-            (iterations_bounds : 0 <= 2 ^ (machine_wordsize - 1) - iterations (Z.log2 m + 1) - 3)
-            (m_odd : Z.odd m = true)
-            (m_bounds2 : m < 2 ^ (machine_wordsize * tc_limbs - 2)) :
+            (g_bounds : - 2 ^ (machine_wordsize * Z.of_nat tc_limbs - 2) <
+                          tc_eval g < 2 ^ (machine_wordsize * Z.of_nat tc_limbs - 2)) :
       eval (by_inv g) mod m = by_inv_ref m (tc_eval g) * 2 ^ (2 * machine_wordsize * mont_limbs) mod m.
     Proof.
       assert (2 ^ (machine_wordsize * Z.of_nat tc_limbs - 2) < 2 ^ (machine_wordsize * Z.of_nat tc_limbs - 1)).
@@ -276,7 +278,10 @@ Module UnsaturatedSolinas.
     Local Notation in_bounded := (in_bounded machine_wordsize).
     Local Notation m := (s - Associational.eval c).
 
-    Context (m_bounds : 1 < m).
+    Context (m_bounds : 1 < m)
+            (iterations_bounds : 0 <= 2 ^ (machine_wordsize - 1) - iterations (Z.log2 m + 1) - 3)
+            (m_odd : Z.odd m = true)
+            (m_bounds2 : m < 2 ^ (machine_wordsize * tc_limbs - 2)).
 
     Local Notation addmod := (addmod limbwidth_num limbwidth_den n).
     Local Notation oppmod := (oppmod limbwidth_num limbwidth_den n balance).
@@ -302,13 +307,11 @@ Module UnsaturatedSolinas.
       all: auto.  apply precomp_bound.
     Qed.
 
-    Theorem by_inv_jump_spec g
+    Theorem by_inv_jump_correct g
             (g_length : length g = tc_limbs)
-            (g_bounds : - 2 ^ (machine_wordsize * Z.of_nat tc_limbs - 2) < tc_eval g < 2 ^ (machine_wordsize * Z.of_nat tc_limbs - 2))
             (g_in_bounded : in_bounded g)
-            (iterations_bounds : 0 <= 2 ^ (machine_wordsize - 1) - iterations (Z.log2 m + 1) - 3)
-            (m_odd : Z.odd m = true)
-            (m_bounds2 : m < 2 ^ (machine_wordsize * tc_limbs - 2)) :
+            (g_bounds : - 2 ^ (machine_wordsize * Z.of_nat tc_limbs - 2) <
+                          tc_eval g < 2 ^ (machine_wordsize * Z.of_nat tc_limbs - 2)) : 
       eval (by_inv g) mod m = by_inv_ref m (tc_eval g).
     Proof.
       assert (2 ^ (machine_wordsize * Z.of_nat tc_limbs - 2) < 2 ^ (machine_wordsize * Z.of_nat tc_limbs - 1)).
@@ -346,16 +349,7 @@ Module UnsaturatedSolinas.
       rewrite eval_msat in H2.
       rewrite Z.twos_complement_one in H2 by lia.
       replace (eval (zero n)) with 0 in H2 by (symmetry; apply eval_zero).
-      replace (eval (one n)) with 1 in H2.
-      2: { unfold one.
-           destruct n. lia.
-           rewrite Positional.eval_cons.
-           rewrite weight_0.
-           replace (S n1 - 1)%nat with n1 by lia.
-           rewrite Positional.eval_zeros. lia.
-           apply wprops. assumption. simpl.
-           rewrite Nat.sub_0_r.
-           auto with len. }
+      replace (eval (one n)) with 1 in H2 by (symmetry; apply eval_one; assumption).
 
       rewrite Z.mod_0_l, Z.mod_1_l in H2 by lia.
       destruct Nat.iter as [[[[dk fk]gk]vk]rk].

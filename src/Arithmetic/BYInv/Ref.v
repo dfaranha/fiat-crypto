@@ -390,3 +390,18 @@ Proof.
      + push_Zmod; pull_Zmod. apply f_equal2; lia.
      + push_Zmod; pull_Zmod. apply f_equal2; lia.
 Qed.
+
+Definition by_inv_jump_spec f g mw
+        (f_bound : (21 < Z.log2 f))
+        (g_bound : 0 < g <= f)
+        (mw_bound : 2 < mw)
+        (fg_rel_prime : Z.gcd f g = 1)
+        (fodd : Z.odd f = true) :=
+  by_inv_jump_ref f g mw * g mod f = 1.
+
+Definition by_inv_spec f g
+        (f_bound : (21 < Z.log2 f))
+        (g_bound : 0 < g <= f)
+        (fg_rel_prime : Z.gcd f g = 1)
+        (fodd : Z.odd f = true) :=
+  by_inv_ref f g * g mod f = 1.

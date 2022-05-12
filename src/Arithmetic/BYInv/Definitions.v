@@ -359,7 +359,6 @@ Module Export WordByWordMontgomery.
       let bits := (Z.log2 m) + 1 in
       let msat := partition tc_limbs m in
       let jump_its := jump_iterations bits machine_wordsize in
-      let total_iterations := jump_its * (machine_wordsize - 2) in
       let pc := partition mont_limbs jumpdivstep_precomp in
       let '(_, fm, _, vm, _) :=
         fold_left (fun data i => jump_divstep_aux data)
@@ -572,7 +571,6 @@ Module UnsaturatedSolinas.
       let bits := (Z.log2 m) + 1 in
       let msat := partition m in
       let jump_its := jump_iterations bits machine_wordsize in
-      let total_iterations := jump_its * (machine_wordsize - 2) in
       let pc := encodemod jumpdivstep_precomp in
       let '(_, fm, _, vm, _) := fold_left (fun data i => jump_divstep_aux data) (seq 0 (Z.to_nat jump_its))
                                           (1,msat,g,zero n,one n) in
