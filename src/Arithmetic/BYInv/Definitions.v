@@ -121,7 +121,7 @@ Definition tc_mul_full machine_wordsize na nb a b :=
 Definition word_tc_mul machine_wordsize n (a : Z) b :=
   tc_mul_full machine_wordsize 1 n [a] b.
 
-Definition twos_complement_word_full_divstep_aux machine_wordsize (data : Z * Z * Z * Z * Z * Z * Z) :=
+Definition word_divstep_aux machine_wordsize (data : Z * Z * Z * Z * Z * Z * Z) :=
   let '(d,f,g,u,v,q,r) := data in
   let cond := Z.land (Z.twos_complement_pos machine_wordsize d) (g mod 2) in
   dlet d' := Z.zselect cond d (Z.twos_complement_opp machine_wordsize d) in
@@ -143,11 +143,11 @@ Definition twos_complement_word_full_divstep_aux machine_wordsize (data : Z * Z 
   let r'' := (r' + v''') mod 2^machine_wordsize in
   (d'',f',g'',u'',v'',q'',r'').
 
-Definition twos_complement_word_full_divstep machine_wordsize d f g u v q r :=
-  twos_complement_word_full_divstep_aux machine_wordsize (d, f, g, u, v, q, r).
+Definition word_divstep machine_wordsize d f g u v q r :=
+  word_divstep_aux machine_wordsize (d, f, g, u, v, q, r).
 
-Definition twos_complement_word_full_divsteps machine_wordsize d f g u v q r n :=
-  fold_left (fun data i => twos_complement_word_full_divstep_aux machine_wordsize data) (seq 0 n) (d,f,g,u,v,q,r).
+Definition word_divsteps machine_wordsize d f g u v q r n :=
+  fold_left (fun data i => word_divstep_aux machine_wordsize data) (seq 0 n) (d,f,g,u,v,q,r).
 
 Definition twos_complement_word_full_hddivstep_aux machine_wordsize (data : Z * Z * Z * Z * Z * Z * Z) :=
   let '(d,f,g,u,v,q,r) := data in
@@ -204,8 +204,9 @@ Module Export WordByWordMontgomery.
     Local Notation arithmetic_shiftr := (arithmetic_shiftr machine_wordsize word_tc_mul_limbs).
     Local Notation tc_zero := (zero tc_limbs).
     Local Notation mont_zero := (zero mont_limbs).
-    Local Notation word_divstep := (fun (i : nat) data => twos_complement_word_full_divstep_aux machine_wordsize data).
+    Local Notation word_divstep := (fun (i : nat) data => word_divstep_aux machine_wordsize data).
     Local Notation partition := (Partition.partition (uweight machine_wordsize)).
+    Local Notation tc_sign_bit := (tc_sign_bit machine_wordsize tc_limbs).
 
     Definition divstep_aux (data : Z * (list Z) * (list Z) * (list Z) * (list Z)) :=
       let '(d,f,g,v,r) := data in
@@ -244,7 +245,7 @@ Module Export WordByWordMontgomery.
         fold_left (fun data i => divstep_aux data)
                   (seq 0 (Z.to_nat its))
                   (1,msat,g,zero mont_limbs,one mont_limbs) in
-      let sign := tc_sign_bit machine_wordsize tc_limbs fm in
+      let sign := tc_sign_bit fm in
       let inv := mulmod pc vm in
       let inv := select sign inv (oppmod inv) in
       inv.
@@ -288,7 +289,7 @@ Module Export WordByWordMontgomery.
     Definition jump_divstep d f g v r := jump_divstep_aux (d, f, g, v, r).
 
     Definition inner_loop d f g :=
-      let '(d1,_,_,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_divstep_aux machine_wordsize data) (d,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+      let '(d1,_,_,u1,v1,q1,r1) := fold_right (fun i data => word_divstep_aux machine_wordsize data) (d,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
       (d1, u1, v1, q1, r1).
 
     Definition inner_loop_hd d f g :=
@@ -364,7 +365,7 @@ Module Export WordByWordMontgomery.
         fold_left (fun data i => jump_divstep_aux data)
                   (seq 0 (Z.to_nat jump_its))
                   (1,msat,g,zero mont_limbs,one mont_limbs) in
-      let sign := tc_sign_bit machine_wordsize tc_limbs fm in
+      let sign := tc_sign_bit fm in
       let inv := mulmod pc vm in
       let inv := select sign inv (oppmod inv) in
       inv.
@@ -414,6 +415,7 @@ Module UnsaturatedSolinas.
     Local Notation word_tc_mul := (word_tc_mul machine_wordsize tc_limbs).
     Local Notation arithmetic_shiftr := (arithmetic_shiftr machine_wordsize word_tc_mul_limbs).
     Local Notation partition := (Partition.partition (uweight machine_wordsize) tc_limbs).
+    Local Notation tc_sign_bit := (tc_sign_bit machine_wordsize tc_limbs).
 
     Definition divstep_aux (data : Z * (list Z) * (list Z) * (list Z) * (list Z)) :=
       let '(d,f,g,v,r) := data in
@@ -453,7 +455,7 @@ Module UnsaturatedSolinas.
         fold_left (fun data i => divstep_aux data)
                   (seq 0 (Z.to_nat its))
                   (1,msat,g,zero n,one n) in
-      let sign := tc_sign_bit machine_wordsize tc_limbs fm in
+      let sign := tc_sign_bit fm in
       let inv := carry_mulmod pc vm in
       let oppinv := oppmod inv in
       let inv := select sign inv oppinv in
@@ -469,7 +471,7 @@ Module UnsaturatedSolinas.
       dlet res := select cond a_enc a_opp_enc_opp_carry in res.
 
     Definition jump_divstep_aux '(d, f, g, v, r) :=
-      let '(d1,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_divstep_aux machine_wordsize data) (d,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+      let '(d1,f1,g1,u1,v1,q1,r1) := fold_right (fun i data => word_divstep_aux machine_wordsize data) (d,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
       dlet f2 := word_tc_mul u1 f in
       dlet f3 := word_tc_mul v1 g in
       dlet g2 := word_tc_mul q1 f in
@@ -495,7 +497,7 @@ Module UnsaturatedSolinas.
     (d1, f6, g6, v5, r5).
 
     Definition inner_loop d f g :=
-      let '(d1,_,_,u1,v1,q1,r1) := fold_right (fun i data => twos_complement_word_full_divstep_aux machine_wordsize data) (d,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
+      let '(d1,_,_,u1,v1,q1,r1) := fold_right (fun i data => word_divstep_aux machine_wordsize data) (d,nth_default 0 f 0,nth_default 0 g 0,1,0,0,1) (seq 0 (Z.to_nat (machine_wordsize - 2))) in
       (d1, u1, v1, q1, r1).
 
     Definition inner_loop_hd d f g :=
@@ -574,7 +576,7 @@ Module UnsaturatedSolinas.
       let pc := encodemod jumpdivstep_precomp in
       let '(_, fm, _, vm, _) := fold_left (fun data i => jump_divstep_aux data) (seq 0 (Z.to_nat jump_its))
                                           (1,msat,g,zero n,one n) in
-      let sign := tc_sign_bit machine_wordsize tc_limbs fm in
+      let sign := tc_sign_bit fm in
       let inv := carry_mulmod pc vm in
       let inv := select sign inv (oppmod inv) in
       carrymod inv.

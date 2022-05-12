@@ -56,12 +56,12 @@ Module Export WordDivstep.
 
     Local Notation tc := (Z.twos_complement machine_wordsize).
 
-    Lemma twos_complement_word_full_divsteps_d_bound d f g u v q r n K
+    Lemma word_divsteps_d_bound d f g u v q r n K
           (Kpos : 0 <= K < 2 ^ (machine_wordsize - 1) - (Z.of_nat n))
           (mw1 : 1 < machine_wordsize)
           (d_bounds : - K <= tc d <= K) :
       let '(d1,_,_,_,_,_,_) :=
-        fold_left (fun data i => twos_complement_word_full_divstep_aux machine_wordsize data)
+        fold_left (fun data i => word_divstep_aux machine_wordsize data)
                   (seq 0 n)
                   (d,f,g,u,v,q,r) in
       - K - Z.of_nat n <= tc d1 <= K + Z.of_nat n.
@@ -71,7 +71,7 @@ Module Export WordDivstep.
       - rewrite seq_snoc, fold_left_app.
         replace (Z.of_nat (S n)) with (1 + Z.of_nat n) in * by lia.
         cbn -[Z.mul Z.add].
-        destruct (fold_left (fun (data : Z * Z * Z * Z * Z * Z * Z) (_ : nat)  => twos_complement_word_full_divstep_aux machine_wordsize data) _ _) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E.
+        destruct (fold_left (fun (data : Z * Z * Z * Z * Z * Z * Z) (_ : nat)  => word_divstep_aux machine_wordsize data) _ _) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E.
         cbn -[Z.mul Z.add].
 
         rewrite !Zselect.Z.zselect_correct, Z.twos_complement_pos_spec, Zmod_odd by lia.
@@ -81,25 +81,25 @@ Module Export WordDivstep.
           rewrite ?Z.twos_complement_mod, ?Z.twos_complement_add_full, ?Z.twos_complement_opp_spec, ?Z.twos_complement_one; try lia.
     Qed.
 
-    Lemma twos_complement_word_full_divsteps_f_odd d f g u v q r n
+    Lemma word_divsteps_f_odd d f g u v q r n
           (mw0 : 0 < machine_wordsize)
           (fodd : Z.odd f = true) :
       let '(_,f1,_,_,_,_,_) :=
-        fold_left (fun data i => twos_complement_word_full_divstep_aux machine_wordsize data)
+        fold_left (fun data i => word_divstep_aux machine_wordsize data)
                   (seq 0 n)
                   (d,f,g,u,v,q,r) in
       Z.odd f1 = true.
     Proof.
       induction n; [assumption|].
       rewrite seq_snoc, fold_left_app.
-      destruct (fold_left (fun (data : Z * Z * Z * Z * Z * Z * Z) (_ : nat)  => twos_complement_word_full_divstep_aux machine_wordsize data) _ _) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E.
+      destruct (fold_left (fun (data : Z * Z * Z * Z * Z * Z * Z) (_ : nat)  => word_divstep_aux machine_wordsize data) _ _) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E.
       cbn -[Z.mul Z.add].
       rewrite !Zselect.Z.zselect_correct.
       destruct (dec _); [assumption|].
       rewrite Zmod_odd in *. destruct (Z.odd g1). reflexivity. rewrite Z.land_0_r in n0. contradiction.
     Qed.
 
-    Lemma twos_complement_word_full_divsteps_bounds d f g u v q r n K
+    Lemma word_divsteps_bounds d f g u v q r n K
           (HK : 0 < K)
           (HK2 : 2 ^ Z.of_nat n * K <= 2 ^ (machine_wordsize - 2))
           (mw1 : 1 < machine_wordsize)
@@ -116,7 +116,7 @@ Module Export WordDivstep.
           (q_pos : 0 <= q < 2 ^ machine_wordsize)
           (r_pos : 0 <= r < 2 ^ machine_wordsize) :
       let '(_,f1,g1,u1,v1,q1,r1) :=
-        fold_left (fun data i => twos_complement_word_full_divstep_aux machine_wordsize data)
+        fold_left (fun data i => word_divstep_aux machine_wordsize data)
                   (seq 0 n)
                   (d,f,g,u,v,q,r) in
         - 2 ^ n * K <= tc u1 <= 2 ^ n * K /\
@@ -135,13 +135,13 @@ Module Export WordDivstep.
       - replace (Z.of_nat (S n)) with (Z.of_nat n + 1) in * by lia.
         rewrite <- Z.pow_mul_base in * by lia.
 
-        epose proof twos_complement_word_full_divsteps_d_bound  _ f g u v q r n _ _ _ d_bounds.
-        epose proof twos_complement_word_full_divsteps_f_odd d f g u v q r n _ _.
+        epose proof word_divsteps_d_bound  _ f g u v q r n _ _ _ d_bounds.
+        epose proof word_divsteps_f_odd d f g u v q r n _ _.
 
         rewrite seq_snoc, fold_left_app.
 
         cbn -[Z.mul Z.add].
-        destruct (fold_left (fun (data : Z * Z * Z * Z * Z * Z * Z) (_ : nat)  => twos_complement_word_full_divstep_aux machine_wordsize data) _ _) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E.
+        destruct (fold_left (fun (data : Z * Z * Z * Z * Z * Z * Z) (_ : nat)  => word_divstep_aux machine_wordsize data) _ _) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E.
 
         specialize (IHn ltac:(lia) ltac:(lia)).
         assert (2 * 2 ^ (machine_wordsize - 2) = 2 ^ (machine_wordsize - 1)) by
@@ -173,7 +173,7 @@ Module Export WordDivstep.
              | |- (_, _) = _ => apply f_equal2
              end.
 
-    Theorem twos_complement_word_full_divstep_iter_correct d f g u v q r n K
+    Theorem word_divstep_iter_correct d f g u v q r n K
             (fodd : Z.odd f = true)
             (HK : 2 ^ Z.of_nat n * K <= 2 ^ (machine_wordsize - 2))
             (HK2 : 0 < K)
@@ -192,7 +192,7 @@ Module Export WordDivstep.
             (Hf2 : 0 <= f < 2^machine_wordsize)
             (Hg2 : 0 <= g < 2^machine_wordsize) :
       let '(d1,f1,g1,u1,v1,q1,r1) :=
-        fold_left (fun data i => twos_complement_word_full_divstep_aux machine_wordsize data)
+        fold_left (fun data i => word_divstep_aux machine_wordsize data)
                   (seq 0 n)
                   (d,f,g,u,v,q,r)  in
       (tc d1, tc f1 mod 2 ^ (machine_wordsize - Z.of_nat n), tc g1 mod 2 ^ (machine_wordsize - Z.of_nat n), tc u1, tc v1, tc q1, tc r1) =
@@ -209,13 +209,13 @@ Module Export WordDivstep.
       - replace (Z.of_nat (S n)) with (Z.of_nat n + 1) in * by lia.
         rewrite <- Z.pow_mul_base in * by lia.
 
-        epose proof twos_complement_word_full_divsteps_d_bound _ f g u v q r n _ _ _ overflow_d.
-        epose proof twos_complement_word_full_divsteps_f_odd d f g u v q r n _ _.
-        epose proof twos_complement_word_full_divsteps_bounds d f g u v q r n K _ _ _ _ _ _ _ _ _ _ _ _ _.
+        epose proof word_divsteps_d_bound _ f g u v q r n _ _ _ overflow_d.
+        epose proof word_divsteps_f_odd d f g u v q r n _ _.
+        epose proof word_divsteps_bounds d f g u v q r n K _ _ _ _ _ _ _ _ _ _ _ _ _.
         rewrite Nat_iter_S.
 
         rewrite seq_snoc, fold_left_app. cbn -[Z.mul Z.add].
-        destruct (fold_left (fun (data : Z * Z * Z * Z * Z * Z * Z) (_ : nat)  => twos_complement_word_full_divstep_aux machine_wordsize data) _ _) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E1.
+        destruct (fold_left (fun (data : Z * Z * Z * Z * Z * Z * Z) (_ : nat)  => word_divstep_aux machine_wordsize data) _ _) as [[[[[[d1 f1] g1] u1] v1] q1] r1] eqn:E1.
         destruct (Nat.iter _ _ _) as [[[[[[d1' f1'] g1'] u1'] v1'] q1'] r1'] eqn:E2 .
 
         assert ((Z.twos_complement machine_wordsize d1, Z.twos_complement machine_wordsize f1 mod 2 ^ (machine_wordsize - Z.of_nat n),

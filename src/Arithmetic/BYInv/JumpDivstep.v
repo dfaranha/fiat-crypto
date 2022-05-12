@@ -172,7 +172,7 @@ Module WordByWordMontgomery.
         by (rewrite <- Zpower_exp, !Z.pow_mul_base by nia; apply f_equal2; nia).
 
       unfold jump_divstep_aux.
-      unshelve epose proof twos_complement_word_full_divstep_iter_correct (machine_wordsize) d (nth_default 0 f 0) (nth_default 0 g 0) 1 0 0 1 (Z.to_nat (machine_wordsize - 2)) 1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _.
+      unshelve epose proof word_divstep_iter_correct (machine_wordsize) d (nth_default 0 f 0) (nth_default 0 g 0) 1 0 0 1 (Z.to_nat (machine_wordsize - 2)) 1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _.
       all: t.
       { rewrite eval_nth_default_0 with (m:=machine_wordsize) (n:=tc_limbs); t.
         unfold tc_eval in f_odd.
@@ -182,7 +182,7 @@ Module WordByWordMontgomery.
       { apply nth_default_preserves_properties; auto; lia. }
       { apply nth_default_preserves_properties; auto; lia. }
 
-      unshelve epose proof twos_complement_word_full_divsteps_bounds (machine_wordsize) d (nth_default 0 f 0) (nth_default 0 g 0) 1 0 0 1 (Z.to_nat (machine_wordsize - 2)) 1 _ _ _ _ _ _ _ _ _ _ _ _ _.
+      unshelve epose proof word_divsteps_bounds (machine_wordsize) d (nth_default 0 f 0) (nth_default 0 g 0) 1 0 0 1 (Z.to_nat (machine_wordsize - 2)) 1 _ _ _ _ _ _ _ _ _ _ _ _ _.
       all: t.
       { replace (Z.of_nat (Z.to_nat (machine_wordsize - 2))) with (machine_wordsize - 2) in *; lia. }
       { rewrite eval_nth_default_0 with (m:=machine_wordsize) (n:=tc_limbs); t.
@@ -270,7 +270,7 @@ Module WordByWordMontgomery.
 
       unfold jump_divstep_aux.
 
-      unshelve epose proof twos_complement_word_full_divsteps_bounds machine_wordsize d (nth_default 0 f 0) (nth_default 0 g 0) 1 0 0 1 (Z.to_nat (machine_wordsize - 2)) 1 _ _ _ _ _ _ _ _ _ _ _ _ _.
+      unshelve epose proof word_divsteps_bounds machine_wordsize d (nth_default 0 f 0) (nth_default 0 g 0) 1 0 0 1 (Z.to_nat (machine_wordsize - 2)) 1 _ _ _ _ _ _ _ _ _ _ _ _ _.
       all: (t; try nia).
       { replace (Z.of_nat (Z.to_nat (machine_wordsize - 2))) with (machine_wordsize - 2); lia. }
       { rewrite eval_nth_default_0 with (m:=machine_wordsize) (n:=tc_limbs), Z.odd_mod2m by (assumption || lia).
@@ -325,7 +325,7 @@ Module WordByWordMontgomery.
         cbn -[Z.of_nat].
         destruct (fold_left _ _ _) as [[[[d1 f1] g1] v1] r1] eqn:E.
         specialize (IHn ltac:(lia)).
-        unshelve epose proof twos_complement_word_full_divsteps_d_bound machine_wordsize d1 (nth_default 0 f1 0) (nth_default 0 g1 0) 1 0 0 1
+        unshelve epose proof word_divsteps_d_bound machine_wordsize d1 (nth_default 0 f1 0) (nth_default 0 g1 0) 1 0 0 1
                  (Z.to_nat (machine_wordsize - 2))
                  (K + Z.of_nat n * (machine_wordsize - 2)) ltac:(lia) ltac:(lia) ltac:(lia).
         cbn -[Z.of_nat].
@@ -510,7 +510,7 @@ Module UnsaturatedSolinas.
         by (rewrite <- Zpower_exp, !Z.pow_mul_base by nia; apply f_equal2; nia).
 
       unfold jump_divstep_aux.
-      unshelve epose proof twos_complement_word_full_divstep_iter_correct (machine_wordsize) d (nth_default 0 f 0) (nth_default 0 g 0) 1 0 0 1 (Z.to_nat (machine_wordsize - 2)) 1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _.
+      unshelve epose proof word_divstep_iter_correct (machine_wordsize) d (nth_default 0 f 0) (nth_default 0 g 0) 1 0 0 1 (Z.to_nat (machine_wordsize - 2)) 1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _.
       all: (t; try lia).
       { rewrite eval_nth_default_0 with (m:=machine_wordsize) (n:=tc_limbs); t.
         unfold tc_eval in f_odd.
@@ -520,7 +520,7 @@ Module UnsaturatedSolinas.
       { apply nth_default_preserves_properties; auto; lia. }
       { apply nth_default_preserves_properties; auto; lia. }
 
-      unshelve epose proof twos_complement_word_full_divsteps_bounds (machine_wordsize) d (nth_default 0 f 0) (nth_default 0 g 0) 1 0 0 1 (Z.to_nat (machine_wordsize - 2)) 1 _ _ _ _ _ _ _ _ _ _ _ _ _.
+      unshelve epose proof word_divsteps_bounds (machine_wordsize) d (nth_default 0 f 0) (nth_default 0 g 0) 1 0 0 1 (Z.to_nat (machine_wordsize - 2)) 1 _ _ _ _ _ _ _ _ _ _ _ _ _.
       all: t.
       { replace (Z.of_nat (Z.to_nat (machine_wordsize - 2))) with (machine_wordsize - 2) in *; lia. }
       { rewrite eval_nth_default_0 with (m:=machine_wordsize) (n:=tc_limbs); t.
@@ -618,7 +618,7 @@ Module UnsaturatedSolinas.
 
       unfold jump_divstep_aux.
 
-      unshelve epose proof twos_complement_word_full_divsteps_bounds machine_wordsize d (nth_default 0 f 0) (nth_default 0 g 0) 1 0 0 1 (Z.to_nat (machine_wordsize - 2)) 1 _ _ _ _ _ _ _ _ _ _ _ _ _.
+      unshelve epose proof word_divsteps_bounds machine_wordsize d (nth_default 0 f 0) (nth_default 0 g 0) 1 0 0 1 (Z.to_nat (machine_wordsize - 2)) 1 _ _ _ _ _ _ _ _ _ _ _ _ _.
       all: (t; try nia).
       { replace (Z.of_nat (Z.to_nat (machine_wordsize - 2))) with (machine_wordsize - 2); lia. }
       { rewrite eval_nth_default_0 with (m:=machine_wordsize) (n:=tc_limbs), Z.odd_mod2m by (assumption || lia).
@@ -671,7 +671,7 @@ Module UnsaturatedSolinas.
         cbn -[Z.of_nat].
         destruct (fold_left _ _ _) as [[[[d1 f1] g1] v1] r1] eqn:E.
         specialize (IHk ltac:(lia)).
-        unshelve epose proof twos_complement_word_full_divsteps_d_bound machine_wordsize d1 (nth_default 0 f1 0) (nth_default 0 g1 0) 1 0 0 1
+        unshelve epose proof word_divsteps_d_bound machine_wordsize d1 (nth_default 0 f1 0) (nth_default 0 g1 0) 1 0 0 1
                  (Z.to_nat (machine_wordsize - 2))
                  (K + Z.of_nat k * (machine_wordsize - 2)) ltac:(lia) ltac:(lia) ltac:(lia).
         unfold jump_divstep_aux.
